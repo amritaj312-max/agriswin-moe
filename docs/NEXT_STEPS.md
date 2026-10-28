@@ -1,206 +1,413 @@
-# What to do next, in order
+# What to do next, step by step
 
-Plain-language companion to `ACTION_PLAN.md`. That document explains *why*;
-this one is just *what to type next*.
+The hands-on guide: what to open, what to type, what you should see, and what to
+do when something looks wrong. For *why* each step exists, see
+[ACTION_PLAN.md](ACTION_PLAN.md).
 
----
-
-## First: where everything actually lives
-
-This is the thing that looks broken but is not.
-
-Everything is inside the project folder. Paths below are relative to
-`C:\Users\AMRITA JENA\Plant Disease Detection\`.
-
-| Thing | Where it is | In git? | Size |
-|---|---|---|---|
-| The 54,305 PlantVillage images | `data\raw\plantvillage\raw\color\` | **No** | 811 MB |
-| The 2,589 PlantDoc images | `data\raw\plantdoc\train\`, `...\test\` | **No** | 962 MB |
-| The *list* of which image is train/val/test | `data\splits\*.csv` | **Yes** | 6 MB |
-| All the code | `ml_pipeline\src\` | **Yes** | small |
-| Trained models | nowhere yet | no | - |
-
-**In the folder, but not in git.** `.gitignore` excludes `data/raw/`, so the
-images sit next to the code where you can browse them, while git never stages,
-commits or pushes them — GitHub rejects pushes that size, and a repo nobody can
-clone is worse than no repo. What gets committed instead is the *decision* about
-which image goes where. That is the part that must never change, because every
-model in the paper has to be scored on identical images.
-
-The root is overridable (`ml_pipeline/configs/data_root.txt`, or
-`$AGRISWIN_DATA_ROOT`) for a small system drive or for Colab/Kaggle. With no
-override, it is `<repo>/data`.
-
-Look inside `data/splits/plantvillage_train.csv` and you will see rows like:
-
-```
-Apple___Apple_scab/00075aa8-...___FREC_Scab 3335.JPG,Apple___Apple_scab,0,Apple,3,0
-```
-
-That is a *pointer*: filename, class name, class number, crop, which MoE expert
-owns it, and which duplicate-group it belongs to. The code joins the pointer to
-the data root at load time. Move the images to another drive, or to Kaggle, and
-only `ml_pipeline/configs/data_root.txt` changes - the splits stay byte-for-byte
-identical.
-
-Prove the data is present any time:
-
-```bash
-python ml_pipeline/src/data/dataset.py
-```
-
-Expected output: three split sizes (37,992 / 8,158 / 8,155), then one real batch
-of shape `(4, 3, 256, 256)`. If that prints, the whole data layer works.
-
-## Second: nothing is trained yet
-
-To be unambiguous, because this is where the confusion started:
-
-- **Zero models exist.** No weights file, no accuracy number, nothing.
-- `ACTION_PLAN.md` names five models (EfficientNet-B0, MobileViT-S, Swin-V2-T,
-  AgriSwin-MoE teacher, AgriSwin-MoE student). Those are the five rows of the
-  paper's results table. All five cells are empty.
-- "Backbones build" in the Phase 1 report means only that `timm` can construct
-  the untrained network and run one forward pass on this GPU. That is a plumbing
-  check, not training.
-
-Phase 1 built the **road**. No car has driven on it.
+**Where you are (28 Oct 2026):** data downloaded and split; training loop written
+and tested — a 2-epoch EfficientNet-B0 test run reached 99.03% test accuracy.
+**There are no paper results yet.** Next: train the three baselines.
 
 ---
 
-## Step 1 - Write the training loop (half a day, no GPU time)
+## The whole route
 
-One file, `ml_pipeline/src/training/train.py`, used by every run in the paper:
-baselines, ablations, teacher, student. One loop means a bug fixed once is fixed
-everywhere, and no reviewer can ask whether two rows were trained differently.
-
-It needs: AMP (fp16), cosine LR schedule with warmup, label smoothing,
-per-epoch val, best-checkpoint-by-macro-F1, early stopping, a resumable
-checkpoint, and a `results/<run>.json` with every metric plus the exact config.
-
-Two non-negotiables, both from `configs/hardware.md`:
-
-```bash
-PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-```
-
-and batch 32 at 256px. Without the allocator setting, Swin-V2-T dies above batch
-16 and the error says `CUBLAS_STATUS_EXECUTION_FAILED`, which does not look like
-an out-of-memory error at all.
-
-**Checkpoint:** run it for 2 epochs on EfficientNet-B0 and confirm loss falls and
-a JSON file appears. Do not start a long run until this works.
-
-## Step 2 - Train the three baselines (~12 h GPU, mostly unattended)
-
-Order matters. Cheapest first, so bugs surface early.
-
-| # | Model | Epochs | Time | Why this one |
+| | Stage | Who does it | Your time | GPU time |
 |---|---|---|---|---|
-| 2a | EfficientNet-B0 | 30 | ~4 h | Cheapest. Proves the loop end to end. |
-| 2b | MobileViT-S | 30 | ~5 h | The mobile competitor your student must beat. |
-| 2c | Swin-V2-T vanilla | 40 | ~7.5 h | Baseline **and** ablation row 1. Free. |
+| **A** | One-time laptop setup | you | 15 min | — |
+| **B** | Baseline 1: EfficientNet-B0 | you, one command | 10 min | up to ~2 h |
+| **C** | Baseline 2: MobileViT-S | you, one command | 10 min | up to ~4 h |
+| **D** | Baseline 3: Swin-V2-T — the gate | you, one command | 10 min | up to ~8 h (overnight) |
+| **E** | Read the results, fill Table II | you | 30 min | — |
+| ∥ | While the GPU works: venue, paper skeleton, related work | you | hours | — |
+| **F** | Phases 3–8: the novelties, uncertainty, mobile, app, writing | Claude writes code, you run it | weeks | days |
 
-**2c is the real gate.** Vanilla Swin-V2-T should reach roughly 99% on
-PlantVillage - it is a strong ImageNet-pretrained model on an easy lab dataset.
-If it lands at 99%, the data pipeline is trustworthy. If it lands at 80%, or at
-100.0%, stop: 80% means a bug, 100% means leakage. Either way, nothing built on
-top of it would mean anything.
+**A–E can all be done today and tomorrow.** F needs code that does not exist yet;
+you start each part of it by asking Claude.
 
-These can run overnight. After Step 2 the paper has three real numbers in it.
+A realistic schedule:
 
-## Step 3 - Build ST-DAM (Novelty 1) (~1 week)
-
-Sobel branch (shape) + Gabor branch (texture) + cross-attention fusion, inserted
-into Swin-V2-T. Then the ablation that justifies it:
-
-| Run | What it tests |
+| When | Do |
 |---|---|
-| + ST-DAM full | does it help at all |
-| shape branch only | is shape doing the work |
-| texture branch only | is texture doing the work |
-| both, concat instead of cross-attention | is the *fusion* the contribution |
+| Day 1, morning | A (setup), then start B |
+| Day 1, ~2 h later | check B, commit it, start C |
+| Day 1, evening | check C, commit it, start D and leave it overnight |
+| Day 2, morning | check D (the gate), commit it, then E |
 
-That fourth run is the one a reviewer asks for. Without it, "we added attention
-and it got better" is not a finding.
-
-Grad-CAM figures come from here too, and they are the figures people remember.
-
-## Step 4 - Build the MoE head (Novelty 2) (~1 week)
-
-6 experts, top-2 routing, load-balancing loss. Use `classes.py` for the split -
-**10/4/4/4/3/13** - not the numbers in the old design docs, which are wrong
-(see `ACTION_PLAN.md` section 3.1).
-
-Read section 3.2 of `ACTION_PLAN.md` before writing this. The short version: if
-you hard-assign experts by crop, the router only has to tell an apple from a
-tomato, which is trivial, and the MoE collapses into a per-crop classifier. The
-defence is to let routing be **learned** rather than supervised by crop label,
-then show which experts actually emerge. If they do not line up with crop
-families, that is a genuinely more interesting result.
-
-Then train the combined model (ST-DAM + MoE). That is the teacher.
-
-## Step 5 - Uncertainty and cross-dataset (~3 days, almost no GPU)
-
-The best value in the whole project, and it needs **no training at all** - it
-runs inference on models you already have.
-
-MC-dropout, ECE, reliability diagram, risk-coverage curve, then PlantDoc.
-
-The honest framing (section 3.3): ST-DAM and MoE will **not** fix domain shift.
-Published work shows 98.9% on PlantVillage collapsing to 13.1% on PlantDoc, and
-that gap comes from dataset bias - uniform backgrounds, one centred leaf, studio
-lighting - not from attention design. Claim "we solve domain shift" and report
-35%, and the paper is rejected. Claim instead:
-
-> Under domain shift, the model knows that it does not know.
-
-Show entropy spiking on PlantDoc, show the model abstaining, and report *at 50%
-coverage, accuracy is X%*. Deliverable, cheap, and true.
-
-One real task hiding here: PlantDoc's class names do not match PlantVillage's
-(`grape leaf black rot` vs `Grape___Black_rot`), the two sets do not fully
-overlap, and one PlantDoc class has 2 training images. That mapping needs to be
-written and checked by hand before any cross-dataset number is meaningful.
-
-## Step 6 - Student model and mobile export (~2 weeks)
-
-Distil the teacher into FastViT-SA12 (logit + attention KD), export TFLite INT8,
-and benchmark on a real Android phone - latency, model size, peak RAM. Measured
-on hardware, not estimated.
-
-## Step 7 - App and SLM advisory (~2 weeks)
-
-React Native app, Gemma 3n on-device, SQLite treatment fallback. This is the demo
-and the systems contribution, not an ML claim.
-
-## Step 8 - Write the paper (~2 weeks)
-
-Fill the tables. Results first, then Discussion, then Introduction last.
+While B, C and D train, work on the parallel track (below).
 
 ---
 
-## Do this one thing out of order, today
+## Part A — One-time setup (15 minutes)
 
-**Create the LaTeX skeleton with Tables I, II and III empty, before Step 1.**
+### A1. Open PowerShell in the project folder
 
-It takes an hour and it is the single best discipline available here. Once every
-table cell exists, each experiment has a specific hole to fill - and anything
-that does not fill a hole is work nobody will read. It is also how you find out
-in Week 1, rather than Week 11, that a table needs a number you never planned to
-measure.
+1. Press the **Windows key**, type `PowerShell`, press **Enter**.
+2. Type this and press **Enter**:
 
-## The shortest honest summary
-
-```
-Phase 1 (done)   road built     - data, splits, loaders, measured GPU limits
-Step 1           write the loop - half a day
-Step 2           3 baselines    - 12 h GPU, overnight, FIRST REAL NUMBERS
-Steps 3-4        the novelties  - 2 weeks
-Step 5           uncertainty    - 3 days, cheap, highest value
-Steps 6-8        mobile + paper - 6 weeks
+```powershell
+cd "C:/Users/AMRITA JENA/Plant Disease Detection"
 ```
 
-Next command to type is Step 1, and the first thing it produces is a number for
-the EfficientNet-B0 row.
+The quotes matter, because the path contains spaces. The prompt should now end
+in `Plant Disease Detection>`.
+
+Every command in this guide is typed into this window, from this folder. A new
+window needs the `cd` again.
+
+> **Use a standalone PowerShell window for training**, not a terminal inside
+> another app. Closing the window stops the run. (Nothing is lost but the current
+> epoch — see Part G — but it costs time.)
+
+### A2. Check that Python, the GPU and the data all work
+
+```powershell
+.venv/Scripts/python.exe ml_pipeline/src/data/check_env.py
+```
+
+You should see a column of `[ok]` lines and, at the end, **`Environment is
+ready.`** then `Data is in place.` Any `[FAIL]` or `[warn]` line: stop and tell
+Claude.
+
+```powershell
+.venv/Scripts/python.exe ml_pipeline/src/data/dataset.py
+```
+
+You should see `train 37992 images`, `val 8158`, `test 8155`, and at the end
+**`OK: dataset and loaders work.`**
+
+> **Why `.venv/Scripts/python.exe` and not just `python`?** Plain `python` is
+> the system Python, which has no PyTorch. The `.venv` one has everything this
+> project needs. (Shortcut if you prefer: run `.venv/Scripts/Activate.ps1` once
+> per window — the prompt then starts with `(.venv)` and plain `python` works.)
+
+### A3. Make the laptop safe for multi-hour runs
+
+A run takes 2–8 hours, and Windows will happily interrupt it. Do these once:
+
+1. **Plug in the charger** and leave it in. On battery the GPU slows right down.
+2. **No sleep while plugged in:** Settings → System → Power & battery →
+   *Screen, sleep, & hibernate timeouts* → "When plugged in, put my device to
+   sleep after" → **Never**. The *screen* turning off is fine.
+3. **Power mode:** Settings → System → Power & battery → *Power mode* →
+   **Best performance**.
+4. **Pause Windows Update during long runs:** Settings → Windows Update →
+   **Pause updates** for 1 week. An overnight update restart kills a run.
+5. **Keep the lid open**, on a hard flat surface — not a bed or a lap. The GPU
+   measured 75–78 °C under load; blocked vents push that up and it slows down.
+
+If a run gets interrupted anyway, see Part G: you lose one epoch at most.
+
+### A4. Check that the code is committed
+
+```powershell
+git status
+```
+
+You should see **`nothing to commit, working tree clean`**. Every result records
+the exact code version that produced it; if the tree is not clean, the result is
+marked "uncommitted code" and cannot be traced. If you see changes you did not
+make, ask Claude before training.
+
+---
+
+## Part B — Baseline 1: EfficientNet-B0 (up to ~2 h)
+
+### B1. Start it
+
+```powershell
+.venv/Scripts/python.exe ml_pipeline/src/training/train.py --config ml_pipeline/configs/baselines/efficientnet_b0.yaml
+```
+
+### B2. What you will see
+
+The examples below are real output from the 2-epoch test run.
+
+**A header.** Check two things in it: the `data` line reads **37,992 / 8,158 /
+8,155**, and there is **no `SUBSET` note**. If either is wrong, press Ctrl+C and
+tell Claude.
+
+```
+==============================================================================
+run     efficientnet_b0  (fresh start)
+model   efficientnet_b0  4.06 M params  ImageNet-pretrained
+data    train 37,992 / val 8,158 / test 8,155
+input   256px  mean (0.485, 0.456, 0.406)  std (0.229, 0.224, 0.225)
+recipe  AdamW lr 0.0001 wd 0.05  warmup 2 ep, cosine to 1e-06  40 ep x 1187 steps  batch 32  float16
+==============================================================================
+  data workers took 23s to start
+```
+
+**A progress line every 100 steps** (about every 15 s for this model):
+
+```
+  epoch 1 [ 300/1187]  loss 2.7664  lr 8.43e-05  209 img/s  eta 2m15s
+```
+
+`loss` should fall. `img/s` should be ~200. `eta` is the time left *in this
+epoch*, not in the whole run.
+
+**One summary line per epoch:**
+
+```
+epoch  2/40  train loss 0.1335 acc 96.25%  |  val loss 0.0413 acc 98.84% F1 98.51% ECE 1.09%  |  3m12s  * best
+```
+
+- **val acc and F1 are the numbers that matter.** Expect ~98% after the first
+  epoch, then a slow climb.
+- **train acc is lower than val acc. That is normal here, not a bug:** training
+  images are deliberately distorted (rotations, colour shifts, erased patches)
+  and dropout is on, so training is harder than validation.
+- **`* best`** means this epoch beat every earlier one on val macro-F1, so its
+  weights were saved.
+- **The first epoch is slower** (~6 min) than the rest (~3 min): workers start
+  up and every file is read for the first time. Normal.
+
+### B3. How it ends
+
+It stops by itself, in one of two ways:
+
+- after epoch 40, or
+- earlier, with **`early stop: no val macro-F1 improvement for 10 epochs`**.
+  This is the normal, expected ending: the model stopped improving, and its best
+  weights are already saved.
+
+Then it scores the **test set, once**, and prints (numbers from the test run):
+
+```
+best epoch 2: val macro-F1 98.51%
+test   acc 99.03%  macro-F1 98.64%  balanced acc 98.70%  ECE 1.18%  NLL 0.0355
+time   9m05s training, peak VRAM 1.83 GB
+saved  results\efficientnet_b0.json
+```
+
+and returns to the prompt. That is the run finished.
+
+### B4. Watching it (optional — it is safe to walk away)
+
+- **Is the GPU busy?** Open a *second* PowerShell window and run `nvidia-smi`.
+  **GPU-Util** should be 95–99%.
+- **Is it stuck?** A new progress line appears every 15 s or so for this model
+  (about a minute for Swin-V2-T). Nothing new for 5 minutes means stuck: press
+  Ctrl+C and resume (Part G).
+- **History so far:** open `checkpoints\efficientnet_b0\log.csv` in **Notepad**
+  or VS Code — one row per epoch. Everything printed is also in
+  `checkpoints\efficientnet_b0\train.log`.
+
+> **Do not open `log.csv` in Excel while training.** Excel locks the file.
+> Training survives it — it prints a warning and carries on — but the CSV misses
+> rows. Copy the file first if you want it in Excel.
+
+**One run at a time.** Two at once share the 6 GB of GPU memory, can run out of
+it, and both go slower.
+
+### B5. Check the result
+
+```powershell
+.venv/Scripts/python.exe ml_pipeline/src/evaluation/summarize_results.py
+```
+
+One row per finished run:
+
+```
+run                         params   epochs  test acc  macro-F1     ECE     NLL   time   notes
+----------------------------------------------------------------------------------------------
+efficientnet_b0              4.06M   23/33     99.xx%    99.xx%   x.xx%  0.0xxx   1.8h   early stop
+
+epochs = best epoch / epochs run.  ECE and NLL: lower is better.
+Splits: all 1 full-data run(s) were scored on identical images.
+```
+
+What to check:
+
+- **test acc at least 99%** for EfficientNet-B0. The 2-epoch test already
+  reached 99.03%, so a full run below that is suspicious — tell Claude.
+- **notes does not say `uncommitted code`.** That means A4 was skipped: the
+  number is real, but cannot be traced to a code version. (`early stop` in
+  notes is normal — see B3.)
+- The last line says **`scored on identical images`**. That is the fairness
+  guarantee for Table II. A `WARNING` there means the runs are not comparable —
+  stop and tell Claude.
+
+### B6. Save the result in git
+
+Only the small results file goes into git. The model weights stay in
+`checkpoints\`, which git ignores because they are too big.
+
+```powershell
+git add results/efficientnet_b0.json
+```
+
+```powershell
+git commit -m "Baseline result: EfficientNet-B0"
+```
+
+---
+
+## Part C — Baseline 2: MobileViT-S (up to ~4 h)
+
+Exactly as Part B, with a different config:
+
+```powershell
+.venv/Scripts/python.exe ml_pipeline/src/training/train.py --config ml_pipeline/configs/baselines/mobilevit_s.yaml
+```
+
+Differences to expect:
+
+- The `input` line reads **`mean (0.000, 0.000, 0.000)  std (1.000, 1.000,
+  1.000)`**. That is correct: MobileViT-S was pretrained on raw pixels and is
+  fed them that way.
+- About 6 minutes per epoch. The first progress line of a session shows only
+  ~60 img/s while the GPU tunes itself to this model; after that, ~109 img/s.
+- **It may start slowly.** In short tests it learned noticeably slower over its
+  first few hundred steps than Swin-V2-T did. Judge it at the end, not after one
+  epoch.
+
+Then check it (B5) and commit `results/mobilevit_s.json` (B6). **If MobileViT-S
+finishes clearly below EfficientNet-B0, tell Claude** before carrying on: all
+three models share one learning rate, and a reviewer may ask whether that
+short-changed one of them.
+
+---
+
+## Part D — Baseline 3: Swin-V2-T, the gate (up to ~8 h — run it overnight)
+
+```powershell
+.venv/Scripts/python.exe ml_pipeline/src/training/train.py --config ml_pipeline/configs/baselines/swinv2_tiny.yaml
+```
+
+About 11–12 minutes per epoch, a progress line roughly every minute, ~4 GB of
+GPU memory.
+
+This is the most important of the three. It is your teacher's backbone with
+nothing added, so it is both a baseline and the first row of the ablation
+table — and it is the check on the whole pipeline:
+
+| Swin-V2-T test accuracy | Meaning | What to do |
+|---|---|---|
+| about **99–99.9%** | the pipeline is healthy | carry on |
+| **below ~98%** | something is wrong | stop — tell Claude before training anything else |
+| exactly **100.00%** | unusual on these splits; possible leakage | stop — tell Claude, so it can be checked before you trust it |
+
+Start it in the evening and check it in the morning. If it was interrupted, see
+Part G. Then check (B5) and commit `results/swinv2_tiny.json` (B6).
+
+---
+
+## Part E — Fill Table II's baseline rows
+
+```powershell
+.venv/Scripts/python.exe ml_pipeline/src/evaluation/summarize_results.py
+```
+
+Copy **params, test acc, macro-F1 and ECE** of the three baselines into Table II.
+Leave PlantDoc accuracy, TFLite size and latency empty; they come in Phases 5–6.
+
+Then tell Claude **"baselines done"** and paste the table. Claude checks the
+numbers and starts Phase 3.
+
+---
+
+## The parallel track — while the GPU is busy
+
+Training needs no attention. Use those hours for work only you can do:
+
+1. **Choose the venue and its deadline.** The page limit decides how many tables
+   and experiments the paper can hold; everything later depends on it
+   (ACTION_PLAN.md, Phase 0).
+2. **Create the paper skeleton with Tables I–III empty.** Easiest: open
+   [overleaf.com](https://www.overleaf.com) → New Project → the venue's template
+   (most engineering conferences use the IEEE conference template). Or ask
+   Claude to set it up in `paper/`. Once every table cell exists, each
+   experiment has a specific hole to fill — and anything that fills no hole is
+   work nobody will read.
+3. **Read the three Table I papers** — STA-Net [19], MobilePlantViT [20],
+   AgriSentinel [09] — and draft the Related Work section. Notes are in
+   `research_papers/paper_analysis.txt`.
+
+---
+
+## Part F — After the baselines
+
+These phases need code that does not exist yet. Each one starts with you asking
+Claude, and ends the way Part E does: a summary table and a commit.
+
+| Phase | What Claude builds | What you run | GPU |
+|---|---|---|---|
+| **3. ST-DAM** (Novelty 1) | shape (Sobel) + texture (Gabor) branches with cross-attention fusion, inside Swin-V2-T | 4 runs: full, shape-only, texture-only, no fusion | ~4 × 8 h |
+| **4. MoE head** (Novelty 2) | 6 experts, top-2 routing, load-balancing loss | MoE alone, then the full teacher | ~2 × 8 h |
+| **5. Uncertainty + PlantDoc** | MC-dropout, reliability diagram, risk-coverage curve, PlantDoc class mapping | evaluation scripts on models you already have — no retraining | ~1 h |
+| **6. Student + mobile** | distillation into FastViT-SA12, TFLite export | one distillation run, then benchmarks on a phone | ~6 h |
+| **7. App + advisory** | the app, with Gemma 3n on the device | builds and on-phone tests | — |
+| **8. Writing** | — | fill the tables, write the paper | — |
+
+---
+
+## Part G — When something goes wrong
+
+| You see | It means | Do this |
+|---|---|---|
+| The laptop slept or restarted, or the window closed | the run stopped part-way | run the **same command with `--resume` added** at the end. It continues from the last finished epoch |
+| `already holds a run: pass --resume to continue it` | that run already exists | add `--resume` to continue it — or, to start from zero, delete the folder `checkpoints\<run name>` first |
+| `config differs from the checkpoint in [...]` | the recipe or a config changed since the run began | undo the change. Never edit `recipe.yaml` part-way through a set of runs |
+| `already finished` | that run is complete | nothing to do; its result is in `results\` |
+| `out of memory` or `CUBLAS_STATUS_EXECUTION_FAILED` | GPU memory ran out | close games, videos, anything else using the GPU, then `--resume`. If it happens again, tell Claude |
+| `non-finite loss: the run has diverged` | the training numbers blew up | tell Claude. Do not change the recipe yourself: every run would need redoing |
+| `could not write ...log.csv (open in Excel?)` | Excel has the log open | close Excel; training is unaffected |
+| `CUDA is required` | the GPU is not visible | restart the laptop, then run A2 again |
+| `No module named torch` | plain `python` was used | use `.venv/Scripts/python.exe` |
+| A long error message after you press Ctrl+C | that is just how a stopped run exits | nothing; `--resume` continues it |
+
+**To stop a run on purpose,** press **Ctrl+C**. Only the epoch in progress is
+lost. To continue later, add `--resume`:
+
+```powershell
+.venv/Scripts/python.exe ml_pipeline/src/training/train.py --config ml_pipeline/configs/baselines/swinv2_tiny.yaml --resume
+```
+
+**To split a long run on purpose** — say 20 epochs tonight, the rest tomorrow —
+add `--stop-after 20`, and later run the same command with `--resume` instead.
+
+**To try something that is not a paper result,** give it a name starting with
+`dev_` and override what you like. Git ignores these results:
+
+```powershell
+.venv/Scripts/python.exe ml_pipeline/src/training/train.py --config ml_pipeline/configs/baselines/efficientnet_b0.yaml --set run_name=dev_test epochs=2
+```
+
+---
+
+## Five rules that keep the results publishable
+
+1. **Never edit `ml_pipeline/configs/recipe.yaml` between runs that share a
+   table.** If it has to change, every affected run is redone. Ask Claude first.
+2. **Commit before every real run** — `git status` clean. Results record the code
+   version.
+3. **Never use test numbers to choose anything** — not the number of epochs,
+   not a setting. The loop scores the test set once, at the end, by itself;
+   leave it that way.
+4. **Never edit `data/splits/*.csv`.** They define what "the test set" is.
+   `summarize_results.py` checks that every run used the same images.
+5. **Name experiments `dev_...`.** Only real runs belong in `results/` and in git.
+
+---
+
+## Where everything is
+
+All paths are inside `C:\Users\AMRITA JENA\Plant Disease Detection\`.
+
+| What | Where | In git? |
+|---|---|---|
+| The 54,305 PlantVillage images | `data\raw\plantvillage\raw\color\` | no — too big |
+| The 2,589 PlantDoc images | `data\raw\plantdoc\train\`, `...\test\` | no — too big |
+| Which image is train / val / test | `data\splits\*.csv` | **yes** |
+| The shared training recipe | `ml_pipeline\configs\recipe.yaml` | **yes** |
+| One config per baseline | `ml_pipeline\configs\baselines\*.yaml` | **yes** |
+| Model weights and logs, per run | `checkpoints\<run>\` | no — too big |
+| Results, per run | `results\<run>.json` | **yes** (except `dev_*`) |
+| The code | `ml_pipeline\src\` | **yes** |
+
+A finished run's folder holds `best.pt` (weights at the best epoch — what every
+later phase uses), `last.pt` (full state, for `--resume`), `log.csv`,
+`train.log`, and `FINISHED`. For a real example, look in
+`checkpoints\dev_efficientnet_b0\`.

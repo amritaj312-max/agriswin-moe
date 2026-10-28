@@ -10,6 +10,7 @@ Usage:
 """
 
 import importlib
+import os
 import platform
 import sys
 
@@ -88,8 +89,10 @@ def check_torch():
     del a
     torch.cuda.empty_cache()
 
-    if total < 7:
-        warn(f"{total:.1f} GB VRAM: use batch 16 + AMP + grad accumulation for Swin-V2-T")
+    # Swin-V2-T peaks at 3.99 GB at batch 32, given the expandable_segments
+    # allocator that train.py sets itself (configs/hardware.md)
+    if total < 4.5:
+        warn(f"{total:.1f} GB VRAM: below the ~4 GB Swin-V2-T needs at batch 32")
     return True, torch
 
 
@@ -173,7 +176,11 @@ def main():
     print("\n" + "=" * 62)
     if all(results):
         print("Environment is ready.")
-        print("Next: python ml_pipeline/src/data/download.py --dataset all")
+        import paths
+        if os.path.isdir(paths.image_root("plantvillage")):
+            print("Data is in place. Next: docs/NEXT_STEPS.md")
+        else:
+            print("Next: python ml_pipeline/src/data/download.py --dataset all")
     else:
         print("Some checks failed -- see [FAIL] lines above.")
         sys.exit(1)

@@ -4,11 +4,12 @@ A Hybrid Vision Transformer with Shape-Texture Decoupled Attention, Sparse
 Mixture-of-Experts, and On-Device SLM Advisory for Uncertainty-Aware Offline
 Plant Disease Diagnosis.
 
-**Status:** Phase 1 complete. Environment verified, datasets downloaded, splits
-frozen. **No models trained yet** — every number in the docs is a target, not a
-measurement.
+**Status:** Phase 2. Data downloaded and split; the shared training loop is
+written and verified (a 2-epoch EfficientNet-B0 test run reached 99.03% test
+accuracy). **No paper results yet** — every number in the design docs is a
+target, not a measurement.
 
-- [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md) — what to do next, in order, with commands.
+- [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md) — the step-by-step guide: what to open, what to type, what you should see.
 - [docs/ACTION_PLAN.md](docs/ACTION_PLAN.md) — scope, the paper's table design, and why.
 
 > **The images live in `data/raw/`, but are not committed.** They sit inside the

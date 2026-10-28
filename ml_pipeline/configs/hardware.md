@@ -59,11 +59,39 @@ The loader keeps up comfortably, so the heavy augmentation in
 > because of cudnn autotuning and allocator growth — roughly 4.5x the true
 > steady-state cost, which would make the project look infeasible when it is not.
 
+## Training throughput — measured with train.py
+
+Real runs through the training loop: batch 32, 256px, fp16, 4 workers, the full
+augmentation pipeline. Steady state, after start-up:
+
+| backbone | img/s | per epoch, incl. val | 40-epoch ceiling | peak VRAM |
+|---|---|---|---|---|
+| efficientnet_b0 | 211 | 3m12s | ~2.1 h | 1.83 GB |
+| mobilevit_s | 109 | ~6.2 min | ~4.1 h | 3.19 GB |
+| swinv2_tiny_window8_256 | 59 | ~11.5 min | ~7.7 h | 3.99 GB |
+
+Early stopping (patience 10) usually ends a run before epoch 40, so the last
+column is a ceiling.
+
+- **GPU-bound, not loader-bound.** EfficientNet-B0 holds the GPU at 97–99%
+  utilisation. The laptop GPU sits at its power cap (~48 W, ~1.74 GHz) at
+  75–78 °C, with no thermal throttling.
+- **MobileViT-S runs its first ~100 steps of each session at ~60 img/s** while
+  cuDNN autotunes its many convolution shapes, then holds 109 img/s.
+- **Each data loader costs ~20 s of start-up per session** (train, val and test
+  each spawn 4 worker processes that re-import torch). Irrelevant for real runs;
+  it dominates tiny debug runs, so train.py reports it separately.
+- **The first epoch after the dataset was copied ran 5m53s, sagging from 209 to
+  137 img/s; every later epoch held 211 img/s.** The GPU was not throttled, so
+  the cost was on the file-reading side — probably Windows touching 57,000
+  newly written files on their first read. It did not recur.
+
 ## Planning numbers
 
-- Teacher, 40 epochs: **~7.5 h**
-- Each baseline (EfficientNet-B0, MobileViT-S), 30 epochs: ~4-6 h
-- Full ablation matrix (~8 runs): ~2-3 days of continuous GPU time
+- The three baselines, one after another: at most ~2.1 + 4.1 + 7.7 h, about 14 h
+- Each Swin-V2-T-based run (ablations, teacher): at most ~7.7 h, plus whatever
+  ST-DAM and the MoE head add
+- Full ablation matrix (~8 runs): ~2.5–3 days of GPU time
 
 This fits locally. Reserve Kaggle (30 GPU-h/week, P100/T4x2) for the runs that
 need to go in parallel, not as the primary trainer.
