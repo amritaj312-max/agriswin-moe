@@ -1,0 +1,2375 @@
+RESEARCH PAPER ANALYSIS: LIMITATIONS & FUTURE WORK
+Total Papers Analyzed: 20
+================================================================================
+
+
+================================================================================
+PAPER 01 (2026): 01_2026_Lightweight_Vision_Transformer_Compression_for_On-Device_Pla_2609.05334.pdf
+Total Pages: 17
+================================================================================
+
+--- IDENTIFIED SECTIONS ---
+4.6. Comparative analysis and discussion
+Table 12 situates this study’s baseline accuracy against
+two prior plant-disease-detection works. This study evalu-
+ates exclusively on locally collected, village-partitioned field
+images (Fig. 2).
+Table 13 consolidates the best configuration from each
+compression family against the FP32 baseline (95.13% OOD
+accuracy, Table 1), providing a unified view of the accuracy-
+efficiency space navigated by each method.
+Three of the four families in this table meet or ex-
+ceed the FP32 baseline’s 95.13%: H-BAC 50% pruning by
+0.40 points, Attention KD by 1.58 points, and the inte-
+grated pipeline, averaged over its four tested configurations,
+matches it exactly. PTQ-Dynamic quantization alone is the
+one family that costs accuracy against the baseline (−0.79
+points), the expected small penalty of converting an already-
+fixed set of FP32 weights to INT8 with no further adaptation.
+H-BAC achieves its computational reduction through struc-
+tured FLOP elimination (49.1% active-parameter reduction,
+49.2% FLOPs reduction) while preserving important trans-
+former blocks; PTQ-Dynamic cuts the model size by 74.2%
+at a small, expected accuracy cost; and Attention-Based KD
+gives the largest single-technique reduction in size (93.5%,
+327.42 MB to 21.15 MB) with no measured accuracy cost.
+H-BAC, Attention-Based KD, and PTQ-Dynamic quan-
+tization were combined sequentially into the integrated com-
+pression pipeline described in Section 4 (Table 4). The
+combined pipeline outcome is shown in the last row of
+Table 13: a 98.2% size reduction (327.42 MB to 6.01 MB,
+a 54.5× compression ratio) at 95.13 ± 2.32% accuracy, aver-
+aged over four independent runs, exactly matching the FP32
+baseline’s 95.13% despite compounding all three techniques,
+and notably higher than PTQ-Dynamic’s own standalone
+−0.92-point cost, since KD’s accuracy headroom more than
+offsets quantization’s small penalty in the full pipeline. The
+final model size (6.01 MB) is set almost enti
+
+5. Conclusion
+This paper introduces H-BAC, a compact and efficient
+pipeline for plant disease detection using the Vision Trans-
+former, tailored for real-time application on resource-limited
+edge devices. H-BAC combines attention-driven knowledge
+distillation, pruning of structured parts, and low-precision
+quantization into a unified system that shrinks the model
+size and computational footprint while maintaining accu-
+rate diagnostic capability. Our experimental results show
+that each compression method contributes differently: H-
+BAC pruning at the 50% operating point reduces FLOPs by
+49.2% (35.13 GFLOPs to 17.86 GFLOPs), reaching 95.53%
+accuracy after recovery fine-tuning (0.40 points above the
+95.13% baseline); PTQ-Dynamic quantization achieves a
+74.2% size reduction (327.42 MB to 84.42 MB) at 94.34%
+accuracy, a small expected cost of converting an already-
+trained FP32 checkpoint to INT8 with no further adaptation;
+and Attention-Based KD achieves 96.71±1.03% accuracy at
+a 93.5% size reduction (327.42 MB to 21.15 MB) and lower
+CPU latency than ResNet50 and EfficientFormer. Chaining
+all three techniques into a single integrated pipeline reduces
+the model size from 327.42 MB to 6.01 MB, corresponding
+to a 54.5 × compression ratio (98.16% reduction) and at
+91.97% accuracy for the traced configuration. Also this
+result is broadly stable across three additional pruning-ratio
+configurations (95.13±2.32%, 𝑛= 4) – exactly matching the
+95.13% baseline despite compounding all three compression
+techniques, with KD’s accuracy headroom offsetting quanti-
+zation’s small standalone cost.
+Several considerations qualify these results. First, on
+the Apple M4 Pro CPU used for all CPU latency mea-
+surements in this study, INT8 quantization shows no sig-
+nificant improvement over FP32 inference (Table 6), unlike
+the speedup typically reported on server-class x86 hard-
+ware; INT8’s benefit here is in model size, not latency, and
+practitioners targeting other ARM/edge platforms should
+
+with confidence, and is left to future work.
+Acknowledgment
+The authors would like to acknowledge Mr. Kannan,
+Project Associate, ANRF Grant No. SUR/2022/004268, for
+his valuable assistance in organizing and making the dataset
+publicly available through Figshare
+(https://doi.org/10.6084/m9.figshare.32820110), which
+was used in this study. The authors are grateful to the ANRF,
+New Delhi, India, for funding the research on “Light Weight
+Deep Learning Based Mobile Application for the Early
+Detection, Identification, and Spatiotemporal Monitoring of
+Plant Diseases” (Grant No. SUR/2022/004268).
+References
+[1] Ahmad, A., Saraswat, D., El Gamal, A., 2023. A survey on using deep
+learning techniques for plant disease diagnosis and recommendations
+for development of appropriate tools. Smart Agricultural Technology
+3, 100083.
+[2] Barman, U., Sarma, P., Rahman, M., Deka, V., Lahkar, S., Sharma,
+V., Saikia, M.J., 2024.
+Vit-smartagri: vision transformer and
+smartphone-based plant disease detection for smart agriculture.
+Agronomy 14, 327.
+[3] Cheng, Y., Wang, D., Zhou, P., Zhang, T., 2018. Model compression
+and acceleration for deep neural networks: The principles, progress,
+
+and challenges. IEEE Signal Processing Magazine 35, 126–136.
+[4] Cortes, C., Vapnik, V., 1995.
+Support-vector networks.
+Machine
+Learning 20, 273–297. doi:10.1007/BF00994018.
+[5] Deng, J., Dong, W., Socher, R., Li, L.J., Li, K., Fei-Fei, L., 2009a.
+Imagenet: A large-scale hierarchical image database, in: 2009 IEEE
+conference on computer vision and pattern recognition, Ieee. pp. 248–
+255.
+[6] Deng, J., Dong, W., Socher, R., Li, L.J., Li, K., Fei-Fei, L., 2009b.
+Imagenet: A large-scale hierarchical image database, in: 2009 IEEE
+Conference on Computer Vision and Pattern Recognition, pp. 248–
+255. doi:10.1109/CVPR.2009.5206848.
+[7] Dosovitskiy, A., 2020. An image is worth 16x16 words: Transformers
+for image recognition at scale. arXiv preprint arXiv:2010.11929 .
+[8] Ferentinos, K.P., 2018.
+Deep learning models for plant disease
+detection and diagnosis.
+Computers and electronics in agriculture
+145, 311–318.
+[9] Gole, P., Bedi, P., Marwaha, S., Haque, M.A., Deb, C.K., 2023.
+Trincnet: a lightweight vision transformer network for identification
+of plant diseases. Frontiers in Plant Science 14, 1221557.
+[10] Hamim, S.A., Jony, A.I., 2024.
+Enhanced deep learning model
+architecture for plant disease detection in chilli plants. Journal of Edge
+Computing 3, 136–146.
+[11] Han, S., Mao, H., Dally, W.J., 2015. Deep compression: Compressing
+deep neural networks with pruning, trained quantization and huffman
+coding. arXiv preprint arXiv:1510.00149 .
+[12] Haque, M.A., Deb, C.K., Gole, P., Karmakar, S., Dheeraj, A., Shah,
+M.U.D., Dutta, S., Kumar, M.P., Marwaha, S., 2025. An enhanced
+vision transformer network for efficient and accurate crop disease
+detection. Expert Systems with Applications , 127743.
+[13] Haralick, R.M., Shanmugam, K., Dinstein, I., 1973. Textural features
+for image classification. IEEE Transactions on Systems, Man, and
+Cybernetics SMC-3, 610–621. doi:10.1109/TSMC.1973.4309314.
+[14] Hemalatha, S., Jayachandran, J.J.B., 2024.
+A multitask learning-
+based vision transfor
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > Lightweight ViT Compression for Plant Disease Detection
+Table 9
+Constrained search: full 10-target grid (5 size budgets × 2 accuracy-drop budgets). All 10 combinations were satisfied.
+Size budget
+Stage reached
+Family
+Acc. (%)
+Size (MB)
+10–20 MB
+9
+1.89M-param student (FP32, no-KD)
+94.08
+7.27
+25–30 MB
+3
+KD student (FP32)
+93.68
+21.15
+Table 10
+Escalation trace for the tightest target in Table 9 (10 MB, 2%
+accuracy-drop budget), stages 3 through 9. Stages 1–2 (H-
+BAC pruning, with or without quantization) already fail every
+budget in this grid on size alone and are omitted; stages 5–8
+fit the size budget but fail the accuracy budget.
+Stage
+Family
+Acc. (%)
+Size (MB)
+Result
+3
+KD student (FP32)
+93.68
+21.15
+size fails
+4
+KD student + INT8
+91.97
+6.01
+drop fails
+5
+3.16M student (FP32)
+86.32
+12.11
+drop fails
+6
+3.16M student + INT8
+86.45
+3.64
+drop fails
+7
+2.63M student (FP32)
+83.42
+10.08
+drop fails
+8
+2.63M student + INT8
+83.29
+3.08
+drop fails
+9
+1.89M student (FP32)
+94.08
+7.27
+succeeds
+Table 11
+Compa
+
+
+================================================================================
+PAPER 02 (2026): 02_2026_TinyCNN_A_193K-Parameter_Network_for_On-Device_Plant_Disease_2609.20290.pdf
+Total Pages: 13
+================================================================================
+
+--- IDENTIFIED SECTIONS ---
+Discussion
+Taken together, the experiments yield three deployment-oriented messages. (i) A
+task-specific compact architecture suffices on a controlled benchmark: TinyCNN
+matches much larger backbones on PlantVillage while using 11.8× fewer param-
+eters and ∼3× less per-image CPU compute than the MobileNetV2 teacher,
+directly lowering the energy and memory footprint of inference and making con-
+tinuous monitoring feasible on battery- or solar-powered edge hardware [9,8,14];
+as a first-order estimate, at the measured 4.27 ms CPU latency and a represen-
+tative edge-CPU draw of a few watts, a single inference costs on the order of
+ten millijoules (an order-of-magnitude figure, not a calibrated measurement), so
+the 4.2× latency reduction over MobileNetV2 translates into a comparable per-
+inference energy saving. (ii) On a near-saturated benchmark, vanilla logit-based
+KD behaves only as a tunable regularizer: with a sufficiently capable student,
+TinyCNN for On-Device Plant Disease Detection
+11
+true: Early blight
+pred: healthy
+off-leaf=84%
+true: healthy
+pred: healthy
+off-leaf=83%
+true: healthy
+pred: healthy
+off-leaf=83%
+true: Apple scab
+pred: Bacterial spot
+off-leaf=82%
+true: healthy
+pred: healthy
+off-leaf=81%
+true: healthy
+pred: healthy
+off-leaf=81%
+Input
+Grad-CAM
+(on pred. class)
+Fig. 3. Grad-CAM error analysis on PlantDoc. The top row shows input images and the
+bottom row shows Grad-CAM saliency for the predicted class. In every case the off-leaf
+ratio (the fraction of activation mass outside the leaf region) exceeds 80%, revealing that
+the model attends to background context rather than disease symptoms. High off-leaf
+attention appears both in misclassified samples and in correctly classified “healthy”
+samples, indicating reliance on spurious, dataset-specific cues (shortcut learning) rather
+than transferable disease features.
+the soft labels add little beyond the hard labels [16,17,18]. (iii) In-distribution
+accuracy is not a proxy for field reliability: all models co
+
+Limitations. Three caveats temper these conclusions. All results use a single
+training seed, so we report differences only when they exceed plausible run-to-
+run variance; multi-seed estimates would strengthen the KD comparison. The
+mapped PlantDoc set is small (252 images, 27 classes), so its numbers measure
+domain-shift sensitivity rather than full field performance. Finally, the off-leaf
+ratio depends on the leaf segmentation used to define the leaf region and is
+reported as a qualitative diagnostic.
+6
+
+Conclusion
+This paper presented TinyCNN, a 193,190-parameter depthwise-separable network
+for sustainable on-device plant disease detection that reaches 98.88% accuracy and
+98.03% macro-F1 on the 38-class PlantVillage benchmark while being roughly 58×
+smaller than ResNet18, making it well suited to low-resource edge deployment.
+This paper also analyzed vanilla knowledge distillation with a MobileNetV2
+teacher. An ablation over α and T selected α = 0.3, T = 4, but the distilled
+model is statistically indistinguishable from the scratch-trained TinyCNN: on a
+near-saturated benchmark with a sufficiently capable student, vanilla logit-based
+distillation provides no measurable benefit, and α and T must be tuned jointly.
+Finally, cross-dataset evaluation on PlantDoc revealed a substantial robustness
+gap that Grad-CAM traces to off-leaf, background-driven attention: strong
+
+performance on controlled datasets does not imply field reliability. Future work
+12
+Ho-Lam and Nguyen
+should prioritize domain generalization, field-oriented augmentation, on-device
+quantization (ONNX/TFLite), and multi-seed validation on real edge hardware.
+Acknowledgments
+This research is supported by research funding from Faculty of Information
+Technology, University of Science, Vietnam National University - Ho Chi Minh
+City.
+References
+1. S. Savary, L. Willocquet, S. J. Pethybridge, P. Esker, N. McRoberts, and A. Nelson,
+“The global burden of pathogens and pests on major food crops,” Nature Ecology &
+Evolution, vol. 3, no. 3, pp. 430–439, 2019.
+2. D. P. Hughes and M. Salathé, “An open access repository of images on plant
+health to enable the development of mobile disease diagnostics,” arXiv preprint
+arXiv:1511.08060, 2015.
+3. D. Singh, N. Jain, P. Jain, P. Kayal, S. Kumawat, and N. Batra, “PlantDoc: A
+dataset for visual plant disease detection,” in Proc. ACM India Joint International
+Conference on Data Science and Management of Data, 2020, pp. 249–253.
+4. S. P. Mohanty, D. P. Hughes, and M. Salathé, “Using deep learning for image-based
+plant disease detection,” Frontiers in Plant Science, vol. 7, p. 1419, 2016.
+5. E. C. Too, L. Yujian, S. Njuki, and L. Yingchun, “A comparative study of fine-tuning
+deep learning models for plant disease identification,” Computers and Electronics
+in Agriculture, vol. 161, pp. 272–279, 2019.
+6. K. P. Ferentinos, “Deep learning models for plant disease detection and diagnosis,”
+Computers and Electronics in Agriculture, vol. 145, pp. 311–318, 2018.
+7. G. Hinton, O. Vinyals, and J. Dean, “Distilling the knowledge in a neural network,”
+in Proc. NeurIPS Deep Learning and Representation Learning Workshop, 2015.
+8. M. Sandler, A. Howard, M. Zhu, A. Zhmoginov, and L.-C. Chen, “MobileNetV2:
+Inverted residuals and linear bottlenecks,” in Proc. IEEE/CVF Conference on
+Computer Vision and Pattern Recognition, 2018, pp. 4510–4520.
+9. A. G. Howar
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > 10
+Ho-Lam and Nguyen
+Table 3. Cross-dataset evaluation on PlantDoc.
+Model
+Strict Acc. Strict Macro-F1 Restricted Acc. Restricted Macro-F1
+MobileNetV2 teacher
+28.57
+20.73
+31.35
+27.64
+ResNet18
+26.98
+20.94
+30.16
+28.09
+TinyCNN scratch
+13.10
+8.94
+17.06
+14.29
+TinyCNN KD (α = 0.3, T = 2)
+10.71
+7.10
+14.68
+11.66
+TinyCNN KD (α = 0.3, T = 4)
+13.10
+9.91
+15.08
+12.57
+TinyCNN KD (α = 0.5, T = 2)
+10.32
+7.83
+16.27
+14.86
+TinyCNN KD (α = 0.5, T = 4)
+8.33
+5.92
+12.70
+10.61
+TinyCNN KD (α = 0.7, T = 2)
+13.89
+11.46
+17.86
+15.70
+TinyCNN KD (α = 0.7, T = 4)
+13.49
+9.50
+17.06
+14.12
+Wilson interval 23.3–34.4%) and TinyCNN from 98.88% to 13.10% (9.5–17.8%);
+the resulting gaps of 71.20 and 85.78 percentage points far exceed these intervals.
+Because the test set is small, within-group differences warrant caution: the two
+strongest models overlap (ResNet18 21.9–32.8% vs. MobileNetV2 23.3–34.4%)
+and the KD-checkpoint rows in Table 3 differ within overlapping Wilson intervals,
+so the robust finding is the uniformly low a
+
+
+================================================================================
+PAPER 03 (2025): 03_2025_Hybrid_Knowledge_Transfer_through_Attention_and_Logit_Distil_2504.16128.pdf
+Total Pages: 12
+================================================================================
+
+--- IDENTIFIED SECTIONS ---
+deployments. Future work would explore energy consumption
+metrics (e.g., millijoules per inference), which are essential for
+evaluating suitability in solar or battery-powered agricultural
+IoT nodes.
+4) Comparison with IoT Baselines: To validate the prac-
+ticality of our framework, we conducted a comprehensive
+benchmarking study comparing the Tensorflow lite(tflite) and
+the quantized model against state-of-the-art IoT-optimized
+baselines, including TinyCNN (TinyML) [49], EfficientNet-
+Lite and SqueezeNet. These models were evaluated across crit-
+ical metrics such as accuracy, latency, and memory footprint
+on a PC.
+The distilled MobileNetV3 model achieved superior accu-
+racy (92.4%) while maintaining low latency (45 ms), out-
+performing EfficientNet-Lite (89.1% accuracy, 65 ms latency)
+and MobileNetV2 (88.5% accuracy, 55 ms latency). However,
+the quantized model performed slightly lower at 91% than
+the tflite version of the Mobilenet despite the 50% size
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+10
+reduction. Notably, TinyCNN, a TinyML model optimized for
+microcontrollers, had a minimal size (0.8 MB) but suffered a
+significant accuracy drop (34.3%), rendering it inadequate for
+complex tasks like early-stage disease detection. SqueezeNet,
+though compact (4.9 MB), exhibited poor accuracy (81.3%)
+
+and high latency (70 ms), further highlighting the challenges
+of balancing efficiency and performance in agricultural vision
+systems. The proposed model’s compact size (4.4 MB) and la-
+tency profile (40 ms) also make it ideal for IoT ecosystems. Its
+compatibility with low-bandwidth protocols like LoRaWAN
+enables over-the-air updates, a feature hindered by bulkier
+models like EfficientNet-Lite (12.7 MB). Furthermore, the
+framework’s readiness for federated learning allows decen-
+tralized training across agricultural IoT nodes—a capability
+absent in TinyCNN due to its limited capacity.
+
+VI. CONCLUSIONS
+This work addresses the critical accuracy-efficiency trade-
+off in agricultural IoT systems by proposing a hybrid knowl-
+edge distillation framework that bridges the capabilities of
+Swin Transformers and MobileNetV3. Through transferring
+logit-based class relationships and attention-guided spatial
+reasoning, our method enables lightweight student models
+to achieve near-teacher diagnostic precision, attaining 92.4%
+accuracy while operating within stringent resource constraints
+such as 34 ms/inference latency and 24 MB memory. Key
+innovations include an adaptive attention alignment module,
+which resolves cross-architecture incompatibilities through
+learnable upsampling and projection, and a dual-loss opti-
+mization strategy that balances class probabilities and spatial
+attention maps to enhance fine-grained disease localization.
+Rigorous IoT-centric validation on smartphones and Raspberry
+Pi devices underscores the framework’s practical feasibility,
+demonstrating an 82% latency reduction compared to the
+Swin Transformer teacher and aligning with real-time edge
+deployment requirements.
+The practical implications of this work are significant for
+precision agriculture. By enabling ViT-level accuracy on edge
+devices, the framework empowers farmers with accessible,
+low-cost tools for early disease detection, reducing crop losses
+and promoting sustainable practices. Deployment benchmarks
+confirm readiness for real-time crop monitoring, with open-
+sourced code fostering reproducibility and community-driven
+advancements. However, the framework currently relies on
+a pre-trained centralized teacher, limiting adaptability to dis-
+tributed IoT ecosystems. Additionally, while latency and mem-
+ory metrics are quantified, energy consumption—critical for
+battery-powered drones and solar nodes remains unmeasured.
+
+Future work will explore federated distillation to enable
+privacy-preserving, decentralized training across edge nodes,
+addressing data silos in distributed agricultural systems. Fur-
+thermore, extending the framework to multi-modal tasks like
+pest detection or yield estimation by integrating vision with
+sensor data could broaden its utility. Testing scalability on
+diverse datasets, including field-captured images and multi-
+crop benchmarks like Cassava or RiceLeaf, would enhance
+robustness. Societally, this work advances food security and
+climate-resilient farming, aligning with global sustainability
+goals by democratizing AI-driven tools for resource-limited
+regions.
+REFERENCES
+[1] E. C. Too, L. Yujian, S. Njuki, and L. Yingchun, “A comparative study
+of fine-tuning deep learning models for plant disease identification,”
+Computers
+and
+Electronics
+in
+Agriculture,
+vol.
+161,
+pp.
+272–
+279, 2019, bigData and DSS in Agriculture. [Online]. Available:
+https://www.sciencedirect.com/science/article/pii/S0168169917313303
+[2] A. Kamilaris and F. X. Prenafeta-Bold´u, “Deep learning in agriculture:
+A survey,” Computers and Electronics in Agriculture, vol. 147,
+pp. 70–90, 2018. [Online]. Available: https://www.sciencedirect.com/
+science/article/pii/S0168169917308803
+[3] M. Brahimi, M. Arsenovic, S. Laraba, S. Sladojevic, K. Boukhalfa,
+and A. Moussaoui, Deep Learning for Plant Diseases: Detection and
+Saliency Map Visualisation.
+Cham: Springer International Publishing,
+2018, pp. 93–117.
+[4] K. P. Ferentinos, “Deep learning models for plant disease detection
+and diagnosis,” Computers and Electronics in Agriculture, vol. 145,
+pp. 311–318, 2018. [Online]. Available: https://www.sciencedirect.com/
+science/article/pii/S0168169917311742
+[5] S. M. Hassan, K. Amitab, M. Jasinski, Z. Leonowicz, E. Jasinska,
+T. Novak, and A. K. Maji, “A survey on different plant diseases detection
+using machine learning techniques,” Electronics, vol. 11, no. 17, 2022.
+[Online]. Available: https://www.mdpi.co
+
+[6] J. G. A. Barbedo, “A review on the main challenges in automatic
+plant disease identification based on visible range images,” Biosystems
+Engineering, vol. 144, pp. 52–60, 2016. [Online]. Available: https:
+//www.sciencedirect.com/science/article/pii/S1537511015302476
+[7] S. Sidana, “Towards sustainable agriculture: A transformer-based hybrid
+model for advanced leaf disease classification,” in 2024 15th Inter-
+national Conference on Computing Communication and Networking
+Technologies (ICCCNT), 2024, pp. 1–6.
+[8] J. Maur´ıcio, I. Domingues, and J. Bernardino, “Comparing vision
+transformers and convolutional neural networks for image classification:
+A literature review,” Applied Sciences, vol. 13, no. 9, 2023. [Online].
+Available: https://www.mdpi.com/2076-3417/13/9/5521
+[9] A. Dosovitskiy, L. Beyer, A. Kolesnikov, D. Weissenborn, X. Zhai,
+T. Unterthiner, M. Dehghani, M. Minderer, G. Heigold, S. Gelly,
+J. Uszkoreit, and N. Houlsby, “An image is worth 16x16 words:
+Transformers for image recognition at scale,” 2021. [Online]. Available:
+https://arxiv.org/abs/2010.11929
+[10] S. Khan, M. Naseer, M. Hayat, S. W. Zamir, F. S. Khan, and M. Shah,
+“Transformers in vision: A survey,” ACM Comput. Surv., vol. 54, no.
+10s, 2022. [Online]. Available: https://doi.org/10.1145/3505244
+[11] N. Carion, F. Massa, G. Synnaeve, N. Usunier, A. Kirillov, and
+S. Zagoruyko, “End-to-end object detection with transformers,” in Com-
+puter Vision – ECCV 2020.
+Cham: Springer International Publishing,
+2020, pp. 213–229.
+[12] N. Parmar, A. Vaswani, J. Uszkoreit, Łukasz Kaiser, N. Shazeer,
+A. Ku, and D. Tran, “Image transformer,” 2018. [Online]. Available:
+https://arxiv.org/abs/1802.05751
+[13] H. Touvron, M. Cord, M. Douze, F. Massa, A. Sablayrolles, and
+H. J´egou, “Training data-efficient image transformers & distillation
+through attention,” 2021. [Online]. Available: https://arxiv.org/abs/2012.
+12877
+[14] Z. Liu, Y. Lin, Y. Cao, H. Hu, Y. Wei, Z. Zhang, S. Lin,
+and B. Guo, “Swin transformer: Hierar
+
+of things in agriculture, recent advances and future challenges,”
+Biosystems Engineering, vol. 164, pp. 31–48, 2017. [Online]. Available:
+https://www.sciencedirect.com/science/article/pii/S1537511017302544
+[43] M. S. Farooq, S. Riaz, A. Abid, T. Umer, and Y. B. Zikria,
+“Role
+of
+iot
+technology
+in
+agriculture:
+A
+systematic
+literature
+review,”
+Electronics,
+vol.
+9,
+no.
+2,
+2020.
+[Online].
+Available:
+https://www.mdpi.com/2079-9292/9/2/319
+[44] Y. Qu, W. Deng, and J. Hu, “H-at: Hybrid attention transfer for
+knowledge distillation,” in Pattern Recognition and Computer Vision,
+Y. Peng, Q. Liu, H. Lu, Z. Sun, C. Liu, X. Chen, H. Zha, and J. Yang,
+Eds.
+Cham: Springer International Publishing, 2020, pp. 249–260.
+[45] M. Gehlot, R. K. Saxena, and G. C. Gandhi, ““tomato-village”:
+a dataset for end-to-end tomato disease detection in a real-world
+environment,” Multimedia Syst., vol. 29, no. 6, p. 3305–3328, Aug.
+2023. [Online]. Available: https://doi.org/10.1007/s00530-023-01158-y
+[46] Y.-H. Huang, Mei-Ling; Chang, “Dataset of tomato leaves,” Mendeley
+Data, vol. V1, 2020. [Online]. Available: https://data.mendeley.com/
+datasets/ngdgg79rzb/1
+[47] M.
+Tan
+and
+Q.
+Le,
+“EfficientNet:
+Rethinking
+model
+scaling
+for convolutional neural networks,” in Proceedings of the 36th
+International Conference on Machine Learning, ser. Proceedings of
+Machine Learning Research, K. Chaudhuri and R. Salakhutdinov, Eds.,
+vol. 97.
+PMLR, 09–15 Jun 2019, pp. 6105–6114. [Online]. Available:
+https://proceedings.mlr.press/v97/tan19a.html
+[48] M. Sandler, A. G. Howard, M. Zhu, A. Zhmoginov, and L. Chen,
+“Inverted
+residuals
+and
+linear
+bottlenecks:
+Mobile
+networks
+for
+classification, detection and segmentation,” CoRR, vol. abs/1801.04381,
+2018. [Online]. Available: http://arxiv.org/abs/1801.04381
+[49] J. Lin, L. Zhu, W.-M. Chen, W.-C. Wang, and S. Han, “Tiny
+machine learning: Progress and futures [feature],” IEEE Circuits and
+Systems Magazine, vol. 23, no. 3, p. 8–34, 2023. [Online]. Available:
+http://dx.doi.org/10.
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+9
+Fig. 2.
+Mobile application for IoT-driven tomato disease detection. The
+distilled MobileNetV3 model achieves energy-efficient, real-time inference
+(<100 ms) on edge devices, enabling farmers to diagnose diseases (e.g.,
+’Tomato Bacterial Spot’) via upload or camera capture. This supports scalable
+precision agriculture in resource-constrained environments. In the background,
+data can be optionally uploaded to a cloud server for further analysis.
+Fig. 3. Raspberry Pi testbed setup for evaluation of the models. The proposed
+model’s real-time inference (<25 ms) and small memory footprint (<80 MB)
+make it suitable for on-device real-time inference
+Fig. 4.
+Deployment pipeline for the distilled MobileNetV3 model in IoT-
+driven smart agriculture. Farmers capture or upload crop images via a mobile
+app or a Raspberry Pi, which undergoes preprocessing and on-device inference
+for real-time disease diagnosis.
+3) Hardware Compatibility & Per
+
+
+================================================================================
+PAPER 04 (2026): 04_2026_Energy-Efficient_Plant_Monitoring_via_Knowledge_Distillation_2604.27178.pdf
+Total Pages: 14
+================================================================================
+
+--- IDENTIFIED SECTIONS ---
+Discussion
+Across both datasets, our experiments show that knowledge distillation is a ro-
+bust and effective strategy for improving compact models on plant-related tasks.
+It consistently enhances performance across architectures, training regimes, and
+domains. While pretrained initialization provides the largest single boost in ac-
+curacy, distillation systematically complements it, enabling smaller models to
+match or surpass the performance of much larger systems. These results high-
+light the practical value of distillation for deploying efficient and accurate models
+in real-world environmental monitoring scenarios, particularly when large pre-
+trained models are available as teachers and are costly to fine-tune.
+12
+I. Moummad et al.
+5
+
+Conclusion
+In this work, we explored knowledge distillation as a practical approach to reduce
+the computational footprint of modern plant recognition systems while preserv-
+ing high predictive performance. Large pretrained models have become central
+to biodiversity monitoring and plant disease recognition, but their deployment
+at scale remains constrained by their cost in terms of memory, computation,
+and energy. Our results show that distillation provides an effective mechanism
+to transfer their capabilities into significantly smaller models, enabling more
+efficient inference without sacrificing much accuracy.
+Through a comprehensive empirical study across datasets, architectures, and
+training regimes, we demonstrated that distilled models consistently outperform
+their non-distilled counterparts and can match the performance of much larger
+teacher models. Importantly, these gains hold across both species recognition
+and disease classification tasks, and complement strong pretrained initializations.
+This suggests that distillation is not only a performance-enhancing technique,
+but also a key tool for improving the efficiency–accuracy trade-off in real-world
+applications. From a sustainability perspective, these findings highlight the role
+of knowledge distillation in enabling scalable environmental monitoring systems.
+By reducing model size and inference cost, distillation facilitates deployment
+on resource-constrained platforms such as mobile devices, embedded sensors, or
+edge computing infrastructures, which are essential for large-scale and continuous
+biodiversity observation.
+Looking forward, combining distillation with other model compression tech-
+niques, such as pruning and quantization, represents a promising direction to fur-
+ther decrease energy consumption and hardware requirements. Such integrated
+approaches could lead to highly optimized models tailored for specific deploy-
+ment constraints, enabling energy-efficient plant recognition systems. Overall,
+
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > Energy-Efficient Plant Monitoring via Knowledge Distillation
+11
+Fig. 2. t-SNE visualization of feature embeddings on the PlantNet MetaAlbum dataset
+(Pl@ntNet300K subset with 25 most populous classes) for different models. The CNX-
+T model initialized from DINOv3 produces relatively dispersed and overlapping clus-
+ters, indicating limited separability of plant species. Fine-tuning improves cluster com-
+pactness and class separation, while distillation further enhances the structure of the
+embedding space, yielding tighter and more discriminative clusters. Interestingly, the
+distilled model achieves better class separation than the teacher, BioCLIP 2, suggesting
+that task-specific distillation can improve upon the representations of large pretrained
+models for fine-grained plant recognition.
+Pretraining vs distillation. Pretrained initialization remains a strong factor, with
+all models exceeding 80% accuracy when initialized from DINOv3. However, dis-
+tillation continues to provide addit
+
+
+================================================================================
+PAPER 05 (2025): 05_2025_Involution-Infused_DenseNet_with_Two-Step_Compression_for_Re_2506.00735.pdf
+Total Pages: 20
+================================================================================
+
+--- IDENTIFIED SECTIONS ---
+8. Limitations
+
+In this research, we faced several challenges. The classification report for the hybrid model demonstrates strong
+performance across most classes, with high precision, recall, and F1 scores. However, classes with fewer samples
+perform poorly, scoring below 0.40, indicating the need for improved strategies to address class imbalance. The
+PlantVillage dataset, with its symmetrical samples, consistent backgrounds, and high-quality images, enabled the
+
+compressed CNN and hybrid models to perform optimally. Resource constraints also posed challenges. Frequent GPU
+runtime disconnections on Google Colab initially limited our ability to work with larger datasets. Early experiments
+using the T4 GPU were conducted on the Paddy Leaf dataset, while the PlantVillage experiments leveraged the
+A100 GPU for faster results. However, the A100’s high computational cost (10.59 units/hour) restricted broader
+experimentation, limiting exploration across more diverse datasets.
+
+9. Conclusion and Future Work
+In summary, this research demonstrates the potential of a model compression strategy that combines Weight
+Pruning, Knowledge Distillation, and hybridization with Involutional Layers to optimize CNNs for crop disease
+classification. The framework effectively reduces model size and computational complexity, enabling deployment
+on resource-limited devices like smartphones and edge systems for real-time monitoring. Weight Pruning eliminates
+redundant parameters while preserving performance, and Knowledge Distillation transfers insights from a larger
+teacher network to a compact student model, enhancing accuracy. The hybrid model integrates DenseNet with
+Involutional Layers, providing the student network with the ability to capture complex spatial features using fewer
+parameters. The effectiveness of the framework is reflected in the accuracy metrics: after compression, ResNet50
+achieved 99.55% and 98.99% accuracy on the PlantVillage and PaddyLeaf datasets, respectively, while DenseNet
+recorded optimized accuracies of 99.21% and 93.96%. The hybrid model showed competitive performance, achieving
+98.87% and 97.10% accuracy across the two datasets after the first compression step. Additionally, it showed superior
+robustness under adverse conditions. These results demonstrate the feasibility of deploying precise, energy-efficient
+models in agricultural settings, promoting timely disease detection and supporting sustainable crop management. We
+aim to implement the proposed model in primary datasets in the future for more robust and efficient solutions for real-
+time disease detection. The proposed framework bridges the gap between cutting-edge machine learning techniques
+and practical agricultural solutions, paving the way for broader adoption of AI-powered disease diagnosis in farming.
+References
+[1] A.-Y. Dong, Z. Wang, J.-J. Huang, B.-A. Song, and G.-F. Hao. Bioinformatic tools support decision-making in plant disease management.
+Trends in Pla
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > Involution-Infused DenseNet with Two-Step Compression for Resource-Efficient Plant Disease Classification.
+(a) Accuracy of light-weight models
+(b) Weighted parameter count of light-weight models
+Figure 14: Comparative analysis of the performance of the light-weight models
+Figure 15: Comparative flop count of Teacher and Student models
+as parameters are reduced, the model remains optimized compared to other architectures, offering room for further
+improvements. The model’s dense connectivity promotes feature reuse, leveraging earlier layers’ features effectively.
+By incorporating involution layers after DenseBlocks, the network dynamically captures complex spatial relationships,
+enriching feature extraction. This synergy between adaptive involution layers and dense connectivity results in a
+powerful model that balances spatial understanding and feature reuse while minimizing parameters. A focused analysis
+of the Floating Point Operations (FLOPs), as shown in Figure 15 and detailed in Ta
+
+
+================================================================================
+PAPER 06 (2024): 06_2024_On_Explaining_Knowledge_Distillation_Measuring_and_Visualisi_2412.13943.pdf
+Total Pages: 15
+================================================================================
+
+--- LAST PAGE TEXT (no specific sections found) ---
+last block in the first
+layer. It has three convolutional layers with 64, 64 and
+256 output channels, respectively. The skip connection
+does not have a convolutional layer.
+• L2: This block is the fourth and last block in the sec-
+ond layer. It has three convolutional layers with 128,
+128 and 512 output channels, respectively.
+• L3: This block is the sixth and last block in the third
+layer. It has three convolutional layers with 256, 256
+and 1024 output channels, respectively.
+• L4: This block is the third and last block in the fourth
+layer. It has three convolutional layers with 512, 512
+and 2048 output channels, respectively.
+ResNet-101: This network has four layers with 3, 4,
+23 and 3 residual blocks, respectively. Each residual block
+has three convolutional layers with batch normalisation and
+ReLU activation. The first convolutional layer has a kernel
+size of 1×1 and reduces the number of channels by a factor
+of 4. The second convolutional layer has a kernel size of
+3 × 3 and preserves the number of channels. The third con-
+volutional layer has a kernel size of 1 × 1 and increases the
+number of channels by a factor of 4. The skip connection
+may have a convolutional layer to match the dimensions of
+the input and output. The last blocks in each layer have 256,
+512, 1024 and 2048 output channels, respectively. Hence,
+each layer Li represents the following:
+• L1: This block is the third and last block in the first
+layer. It has three convolutional layers with 64, 64 and
+256 output channels, respectively.
+• L2: This block is the fourth and last block in the sec-
+ond layer. It has three convolutional layers with 128,
+128 and 512 output channels, respectively.
+• L3: This block is the twenty-third and last block in the
+third layer. It has three convolutional layers with 256,
+256 and 1024 output channels, respectively.
+• L4: This block is the third and last block in the fourth
+layer. It has three convolutional layers with 512, 512
+and 2048 output channels, respectively.
+
+
+================================================================================
+PAPER 07 (2025): 07_2025_Automated_Plant_Disease_and_Pest_Detection_System_Using_Hybr_2512.11871.pdf
+Total Pages: 7
+================================================================================
+
+--- IDENTIFIED SECTIONS ---
+E. Discussion: The Pareto Frontier
+The results establish a clear tiered deployment strategy.
+The Proposed CNN provided the most efficient deployment
+profile (42 ms, 4.8 MB), suitable for real-time video scanning
+on legacy hardware. The MobileViT-XS offered the best
+diagnostic reliability (97.3%), serving as a high-precision
+verification tool. This dual capability directly addresses the
+hardware diversity found in post-conflict agricultural zones.
+Comparative confusion matrices on the cactus-fig test set are
+shown below. Custom CNN errors stem mainly from scar-
+vs-lesion texture ambiguity, EfficientNet-Lite1 reduces these
+errors but retains false positives, and MobileViT-XS achieves
+strong separation of cochineal clusters from lesions. Following
+that there is a learning curve and LIME explanation output
+samples.
+5
+Fig. 7: Comparative confusion matrices on the cactus-fig held-out test set. (Left) Custom CNN shows confusion between
+Healthy and Affected due to re-scaled local texture ambiguity. (Center) EfficientNet-Lite1 reduces margin errors but retains
+false positives under scar-like textures. (Right) MobileViT-XS resolves ambiguity by leveraging global self-attention, achieving
+strong separation for cochineal clusters versus fungal lesions.
+Fig. 8: Training and validation learning curves for the proposed
+lightweight CNN.
+Fig. 9: LIME-based explanation for an Affected prediction,
+highlighting cochineal clusters and lesion regions driving the
+MobileViT-XS decision.
+
+VI. CONCLUSION AND FUTURE WORK
+
+A. Conclusion
+This study developed an offline-first crop disease diagnos-
+tic benchmark for the indigenous cactus-fig crop in Tigray,
+Ethiopia, critical for resilient agricultural decision support in
+infrastructure-broken zones [1]. Using a curated field dataset
+(N
+= 3, 587), we compared local convolution-based and
+global self-attention models without auxiliary transfer learn-
+ing. Results demonstrate a Pareto trade-off: a lightweight
+CNN enables rapid localized texture diagnosis (42 ms, 4.8
+MB, 89.5% accuracy), while the CNN-Transformer hybrid
+MobileViT-XS achieves superior diagnostic reliability (97.3%
+mean cross-validation accuracy) by resolving spatially cor-
+related symptom ambiguities that local convolutions cannot
+model effectively. A rejection class reduces background false
+triggers, and a Tigrigna and Amharic-localized Flutter Android
+interface ensures fully offline inference and farmer-centric
+guidance. This work provides a practical engineering blueprint
+for scalable Edge AI deployment on legacy Android devices
+in conflict-affected agricultural environments.
+
+B. Future Work
+Future iterations of this system will focus on:
+• Hybrid Deployment: Implementing a tiered system
+where the lightweight CNN performs real-time scanning,
+while ambiguous cases are flagged for analysis by the
+more accurate MobileViT model when connectivity al-
+lows.
+• Dataset Expansion: Extending the indigenous dataset to
+include other regional staples such as Teff and Sorghum,
+and incorporating diverse pests like the Fall Armyworm.
+• UAV Integration: Adapting the lightweight model for
+deployment on low-cost drones to enable large-scale, au-
+tonomous monitoring of cactus plantations in inaccessible
+terrain.
+REFERENCES
+
+[1] FAO, “The future of food and agriculture – Trends and challenges,”
+Food and Agriculture Organization of the United Nations, Rome, 2022.
+[2] T. Alemu, “Plant Disease Detection Using Digital Image Processing for
+Commonly Consumed Food Plants in Ethiopia: A Systematic Litera-
+ture Review,” Communications in Computer and Information Science,
+Springer, 2025.
+[3] S. P. Mohanty, D. P. Hughes, and M. Salath´e, “Using deep learning for
+image-based plant disease detection,” Frontiers in Plant Science, vol. 7,
+p. 1419, 2016.
+[4] E. C. Too et al., “A comparative study of fine-tuning deep learning
+models for plant disease detection,” Artificial Intelligence in Agriculture,
+vol. 2, pp. 81–90, 2019.
+[5] A. Berka, A. Hafiane, and Y. Es-saady, “CactiViT: Image-based smart-
+phone application and transformer network for diagnosis of cactus
+cochineal,” Artificial Intelligence in Agriculture, vol. 9, pp. 100370,
+2023.
+6
+[6] L. P. da Silva et al., “Testing Opuntia ficus-indica genotypes for resis-
+tance against Dactylopius coccus (Hemiptera: Dactylopiidae),” Revista
+Colombiana de Entomolog´ıa, vol. 49, no. 2, 2023.
+[7] S. Mehta and M. Rastegari, “MobileViT: Light-weight, General-purpose,
+and Mobile-friendly Vision Transformer,” International Conference on
+Learning Representations (ICLR), 2022.
+[8] L. Wang et al., “PMVT: A lightweight vision transformer for plant
+disease identification on mobile devices,” Frontiers in Plant Science,
+vol. 14, 2023.
+[9] M. Tonmoy et al., “MobilePlantViT: A Mobile-friendly Hybrid ViT
+for Generalized Plant Disease Image Classification,” arXiv preprint
+arXiv:2503.16628, 2025.
+[10] M. Tan and Q. V. Le, “EfficientNet: Rethinking Model Scaling for
+Convolutional Neural Networks,” International Conference on Machine
+Learning (ICML), 2019.
+[11]
+¨U. Atila et al., “Plant disease detection with a lightweight convolutional
+neural network,” IEEE Access, vol. 9, pp. 19826–19834, 2021.
+[12] S. Kumar et al., “L-Net: A Lightweight CNN Framework for Sustainable
+Multicrop 
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > PlantVillage), spanning tomato, potato, maize, and apple crops.
+This pre-training step stabilizes the early layers of the feature
+extractors before fine-tuning on the target domain.
+2) Indigenous Cactus-Fig Dataset: The core contribution
+of this work is the curation of a domain-specific dataset for
+Opuntia ficus-indica (Beles), collected at Mekelle University
+and Adigrat University experimental sites. The full dataset has
+been open-sourced and is accessible via the project repository
+and Kaggle. The dataset consists of 3,587 high-resolution field
+images categorized into three classes:
+• Affected (1,500 images): Cladodes exhibiting symptoms
+of cochineal infestation (white waxy clusters) or fungal
+rot (necrotic lesions).
+• Healthy (1,500 images): Asymptomatic cladodes with
+natural variations in color and texture.
+• No Cactus (587 images): Background images (soil, sky,
+weeds) to train the model to reject non-plant inputs.
+Fig. 3: Example of affected cactus-fig cladode showing
+cochineal cl
+
+
+================================================================================
+PAPER 08 (2025): 08_2025_Evaluation_of_State-of-the-Art_Deep_Learning_Techniques_for__2508.08317.pdf
+Total Pages: 60
+================================================================================
+
+--- LAST PAGE TEXT (no specific sections found) ---
+ge-optimized Inception-v3 for real-time tomato
+disease detection: balancing accuracy and computational efficiency in smart farming. Comput Electron Agric.
+2023;207:107761. doi:10.1016/j.compag.2022.107761.
+159. Praveen S, Jung Y. CBAM-STN-TPS-YOLO: enhancing agricultural object detection through spatially adaptive
+attention mechanisms. arXiv:2506.07357. 2025. doi:10.48550/arXiv.2506.07357.
+160. Lee SH, Goëau H, Bonnet P, Joly A. Attention-based recurrent neural network for plant disease classification. Front
+Plant Sci. 2020;11:601250. doi:10.3389/fpls.2020.601250.
+60
+Comput Mater Contin. 2025
+161. Liu J, Wang X. Early recognition of tomato gray leaf spot disease based on MobileNetv2-YOLOv3 model. Plant
+Methods. 2020;16(1):1–16. doi:10.1186/s13007-020-00624-2.
+162. Albattah W, Nawaz M, Javed A, Masood M, Albahli S. A novel deep learning method for detection and classification
+of plant diseases. Comp Intell Syst. 2022;8(1):507–24. doi:10.1007/s40747-021-00536-1.
+163. Liu Y, Chen X, Wang H, Zhang R. Explainable deep learning for real-time plant disease diagnosis with visual
+interpretation. Precis Agric. 2023;24(2):345–61. doi:10.1007/s11119-022-09934-0.
+164. Yuan W, Lan L, Xu J, Sun T, Wang X, Wang Q, et al. Smart agricultural pest detection using I-YOLOv10-SC: an
+improved object detection framework. Agronomy. 2025;15(1):221. doi:10.3390/agronomy15010221.
+165. Duan J, Ding H, Kim S. A multimodal approach for advanced pest detection and classification. arXiv:2312.10948.
+2023. doi:10.48550/arXiv.2312.10948.
+166. Montagut Marques MJ, Mingxin L, Shiojiri KT, Hagiwara T, Hirose K, Shiojiri K, et al. Plant Doctor: a hybrid
+machine learning and image segmentation software to quantify plant damage in video footage. arXiv.2407.02853.
+2024. doi:10.48550/arXiv.2407.02853.
+167. Li WQ, Han XX, Lin ZB, Rahman A. Enhanced pest and disease detection in agriculture using deep learning-
+enabled drones. Acadlore Transact AI Mach Learn (ATAIML). 2024;3(1):1–10. doi:10.56578/ataiml030101.
+
+
+================================================================================
+PAPER 09 (2025): 09_2025_AgriSentinel_Privacy-Enhanced_Embedded-LLM_Crop_Disease_Aler_2509.09103.pdf
+Total Pages: 16
+================================================================================
+
+--- IDENTIFIED SECTIONS ---
+CONCLUSION
+In this paper, we propose AgriSentinel, a Privacy-Enhanced Embedded-LLM Crop Disease Alert-
+ing System. AgriSentinel integrates a differential privacy noise injection mechanism to protect
+crop image data, a lightweight deep learning model for accurate crop disease classification, and a
+fine-tuned LLM to provide farmers with strategic suggestions for crop disease alerting and man-
+agement. Comprehensive experiments demonstrate that AgriSentinel effectively safeguards crop
+image privacy while delivering accurate and actionable recommendations for crop disease manage-
+ment. Additionally, the system is lightweight, easy to deploy, and designed to be farmer-friendly,
+enabling automated crop disease alerting and management, ultimately contributing to improved
+crop production.
+REFERENCES
+[1] Meenakshi Aggarwal, Vikas Khullar, Nitin Goyal, and Thomas André Prola. 2024. Resource-efficient federated learning
+over IoAT for rice leaf disease classification. Computers and Electronics in Agriculture 221 (2024), 109001.
+[2] Aleksandr Andreev, Anton Kotsenko, Oleg Varlamov, Radmir Kim, and Boris Goryachkin. 2024. Text processing using
+LLM for automatic creation of agricultural crops knowledge bases. In BIO Web of Conferences, Vol. 130. EDP Sciences,
+01029.
+[3] Ons Aouedi, Thai-Hoc Vu, Alessio Sacco, Dinh C Nguyen, Kandaraj Piamrat, Guido Marchetto, and Quoc-Viet
+
+Pham. 2024. A survey on intelligent Internet of Things: Applications, security, privacy, and future directions. IEEE
+Communications Surveys & Tutorials (2024).
+[4] Saikat Banerjee, Soumitra Das, and Abhoy Chand Mondal. 2024. A Study of the Application Domain of a Large
+Language Models in the Agricultural Sector. International Journal of Innovative Research in Computer Science &
+Technology 12, 5 (2024), 74–78.
+[5] Manoj Kumar Barnwal, A Kotasthane, Nicole Magculia, Prasun K Mukherjee, Serge Savary, Anand Kumar Sharma,
+Hanwant B Singh, US Singh, AH Sparks, Mukund Variar, et al. 2013. A review on crop losses, epidemiology and
+disease management of rice brown spot to identify research priorities and knowledge gaps. European Journal of Plant
+Pathology 136 (2013), 443–457.
+[6] Muluadam Berhan Ejigu. 2021. Morphological characterization of bipolaris oryzae and screening of brown spot disease
+resistant lowland rice (oryza sativa l.) genotypes under rainfed condition at fogera plain, south gondar administration
+zone in amhara region, Ethiopia. Ph.D. Dissertation. Bahir Dar University.
+[7] Hanxiao Chen, Hongwei Li, Guishan Dong, Meng Hao, Guowen Xu, Xiaoming Huang, and Zhe Liu. 2020. Practical
+membership inference attack against collaborative inference in industrial IoT. IEEE Transactions on Industrial Informatics
+18, 1 (2020), 477–487.
+[8] Wei Chen and Zhiyuan Li. 2024. Octopus v2: On-device language model for super agent. arXiv preprint arXiv:2404.01744
+(2024).
+[9] Wei Chen and Zhiyuan Li. 2024. Octopus v3: Technical report for on-device sub-billion multimodal ai agent. arXiv
+preprint arXiv:2404.11459 (2024).
+[10] Wei Chen and Zhiyuan Li. 2024. Octopus v4: Graph of language models. arXiv preprint arXiv:2404.19296 (2024).
+[11] Wei Chen, Zhiyuan Li, Zhen Guo, and Yikang Shen. 2024. Octo-planner: On-device language model for planner-action
+agents. arXiv preprint arXiv:2406.18082 (2024).
+[12] Prameeladevi Chillakuru, D Divya, and K Ananthajothi. 2022. Enhanced segmentation with
+
+farming: Challenges and opportunities. IEEE access 8 (2020), 34564–34584.
+[18] Hamid Jalalzai, Elie Kadoche, Rémi Leluc, and Vincent Plassier. 2022. Membership Inference Attacks via Adversarial
+Examples. arXiv preprint arXiv:2207.13572 (2022).
+[19] Mohd Javaid, Abid Haleem, Ravi Pratap Singh, and Rajiv Suman. 2022. Enhancing smart farming through the
+applications of Agriculture 4.0 technologies. International Journal of Intelligent Networks 3 (2022), 150–164.
+[20] Daniel Jimenez, Hugo Dorado, James Cock, Steven D Prager, Sylvain Delerce, Alexandre Grillon, Mercedes Andrade Be-
+jarano, Hector Benavides, and Andy Jarvis. 2016. From observation to information: data-driven understanding of on
+farm yield variation. PloS one 11, 3 (2016), e0150015.
+[21] BHUPENDRA SINGH KHARAYAT. 2023. DISEASES OF FIELD AND HORTICULTURAL CROPS AND THEIR MANAGE-
+MENT VOLUME–II. PHI Learning Pvt. Ltd.
+[22] Chen Liang and Tufail Shah. 2023. IoT in agriculture: The future of precision monitoring and data-driven farming.
+Eigenpub Review of Science and Technology 7, 1 (2023), 85–104.
+[23] Simon V Lirova. 2023. Reaction of Rice Germplasm to Blast and Brownspot Under Natural and Controlled Environment in
+Mwea, Kirinyaga County, Kenya. Ph.D. Dissertation. University of Nairobi.
+[24] John Bethany M Macasero, Nancy P Castilla, Ireneo B Pangga, Leonardo V Marquez, Edwin C Martin, Ulysses G Duque,
+and Alice G Laborte. 2024. Influence of production situation on the incidence of brown spot of rice (Oryza sativa)
+caused by Bipolaris oryzae in the Philippines. Plant Pathology 73, 2 (2024), 390–403.
+[25] Shiva Mehta, Vinay Kukreja, and Amit Gupta. 2023. Revolutionizing Maize Disease Management with Federated
+Learning CNNs: A Decentralized and Privacy-Sensitive Approach. In 2023 4th International Conference for Emerging
+Technology (INCET). IEEE, 1–6.
+[26] Dipali Mishra, D Deepa, et al. 2021. Automation and integration of growth monitoring in plants (with disease prediction)
+and crop prediction. Materials Tod
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > AgriSentinel: Privacy-Enhanced Embedded-LLM Crop Disease Alerting System
+ACM IH&MMSec’25, June 18–20, 2025, San Jose, CA, USA
+Table 9. Illustrative Example for Crop Image with Bacterial Leaf Blight
+(a) Original Crop Image with Bacterial Leaf Blight
+(b) Privacy-Enhanced Crop Image with Bacterial Leaf Blight
+Prompt with Dis-
+ease Prediction Re-
+sult
+Q: What chemicals should I use to treat Bacterial Leaf Blight?
+Original
+GPT-2’s
+Answer (Baseline)
+A: To treat bacterial leaf blight in plants, you can use chemicals such as copper-based
+fungicides, antibiotics like streptomycin, and bactericides like oxytetracycline. It is
+important to follow the instructions on the product label and apply the chemicals at
+the recommended rate and frequency to effectively control the disease. Additionally,
+rotating between different chemical treatments can help prevent the development of
+resistance in the bacteria.
+Fine-tuned LLM’s
+Answer
+A: There are several chemicals that can be used to treat bacterial leaf
+
+
+================================================================================
+PAPER 10 (2025): 10_2025_Design_and_Implementation_of_FourCropNet_A_CNN-Based_System__2503.08348.pdf
+Total Pages: 11
+================================================================================
+
+--- IDENTIFIED SECTIONS ---
+Conclusion
+The proposed FourCropNet model demonstrates its effectiveness as a robust and scalable solution while
+considering its application for multi-crop disease detection, which also consideres addressing the diverse
+
+challenges posed by agricultural datasets. Through its innovative design, incorporating residual blocks for
+efficient feature extraction, attention mechanisms to prioritize disease-relevant regions, and a lightweight
+architecture, FourCropNet achieves superior accuracy alson with significant specificity for true neagative cases
+and sensitivity for true positive cases, and F1 scores compared to state-of-the-art models. Its adaptability across
+varying class complexities, from single-crop datasets to multi-crop datasets with 15 classes, underscores its
+versatility and scalability. The evaluation across crops such as CottonLeaf, Grape, Potato, Soybean, and Corn
+highlights FourCropNet’s consistent performance, achieving the highest accuracy of 99.7% for Grape and 95.3%
+for the combined dataset. These results validate the model’s ability to be used for multiple datasets and to
+generalize effectively across different datasets and disease types while maintaining computational efficiency.
+Moreover, FourCropNet’s architecture is tailored to reduce overfitting and enhance generalization, showcasing
+
+its tuitability for real-world applications. In conclusion, FourCropNet sets a new benchmark for crop disease
+detection models by combining cutting-edge design with practical applicability. Its consistent performance
+across diverse datasets positions it as a reliable tool for farmers and agricultural practitioners, paving the way
+for improved crop health monitoring and sustainable farming practices.
+REFERENCES
+[1] F. O. Isinkaye, M. O. Olusanya, and P. K. Singh, “Deep learning and content-based filtering techniques for
+improving plant disease identification and treatment recommendations: A comprehensive review,”
+Heliyon, vol. 10, no. 9, May 2024, doi: 10.1016/J.HELIYON.2024.E29583.
+[2] M. Shoaib et al., “An advanced deep learning models-based plant disease detection: A review of recent
+research,” Front. Plant Sci., vol. 14, p. 1158933, Mar. 2023, doi: 10.3389/FPLS.2023.1158933/BIBTEX.
+[3] V. Misra and A. K. Mall, “Harnessing image processing for precision disease diagnosis in sugar beet
+agriculture,” Crop Des., vol. 3, no. 4, p. 100075, Nov. 2024, doi: 10.1016/J.CROPD.2024.100075.
+[4] S. Saleem, M. I. Sharif, M. I. Sharif, M. Z. Sajid, and F. Marinello, “Comparison of Deep Learning Models
+for Multi-Crop Leaf Disease Detection with Enhanced Vegetative Feature Isolation and Definition of a New
+Hybrid Architecture,” Agron. 2024, Vol. 14, Page 2230, vol. 14, no. 10, p. 2230, Sep. 2024, doi:
+10.3390/AGRONOMY14102230.
+[5] A. Abade, P. A. Ferreira, and F. de Barros Vidal, “Plant Diseases recognition on images using Convolutional
+Neural Networks: A Systematic Review,” Comput. Electron. Agric., vol. 185, Sep. 2020, doi:
+10.1016/j.compag.2021.106125.
+[6] V. S. Dhaka et al., “A Survey of Deep Convolutional Neural Networks Applied for Prediction of Plant Leaf
+Diseases,” Sensors 2021, Vol. 21, Page 4749, vol. 21, no. 14, p. 4749, Jul. 2021, doi: 10.3390/S21144749.
+[7] M. Nagaraju and P. Chawla, “Systematic review of deep learning techniques in plant disease detection,” Int.
+J. S
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > 468  
+ 
+ J INFORM SYSTEMS ENG, 10(7s) 
+multi-class datasets, achieving high accuracy and balance across all classes. These results confirm the model's 
+potential for practical applications in disease detection across diverse agricultural crops. To understand the 
+computationanl requirements and its comparative study with other standard models, Table 2 shows the count 
+of total learnable parametrers and epochs required to achieve the convergence. 
+ 
+Figure 6: Confusion Matrix Analysis of FourCropNet for 15 Classes 
+Table 2: Comparative Model Complexities 
+Model 
+Input Image Size 
+Learnable Parameters 
+Training Epochs 
+MobileNet-V3 
+224x224 
+5.4 million 
+50 
+ResNet-101 
+224x224 
+44.5 million 
+100 
+EfficientNet-B1 
+240x240 
+7.8 million 
+75 
+Inception-V3 
+299x299 
+23.8 million 
+100 
+FourCropNet (Proposed) 
+224X224 
+6.5 million 
+110 
+ 
+The comparative study is performed for various models across different species and datasets in terms of 
+accuracy. For Soybean disease detection, MobileNet V
+
+
+================================================================================
+PAPER 11 (2023): 11_2023_Crop_Disease_Classification_using_Support_Vector_Machines_wi_2311.00429.pdf
+Total Pages: 17
+================================================================================
+
+--- IDENTIFIED SECTIONS ---
+mental phase. Future work will encompass the creation of a mobile application and the integration
+of additional algorithms for crop recommendation and soil nutrition monitoring, aiming to create an
+all-encompassing solution.
+5
+
+Conclusions
+In this paper, a hybrid model called GCCViT-SVM is proposed for plant disease classification, com-
+bining Support Vector Machines with a vision transformer. The GCCViT-SVM model consists of four
+stages: data acquisition, image augmentation, feature extraction with GCC calculation, and classi-
+fication. Initially, the model is trained and evaluated using the PlantVillage dataset and all its 39
+classes. Image augmentation techniques, including rotation, shifting, shearing, zooming, and flipping,
+are applied to increase the number of training samples. The feature extraction process involves a vision
+transformer that is employed to extract deep features based on the initial features and then GCC for
+each image is calculated. Finally, a MLP head classifier along with SVM determines the class to which
+the leaf belongs. The performance of the proposed GCCViT-SVM model is evaluated using various
+metrics such as accuracy, loss, precision, F1-score, and recall. Experimental results show that the
+model achieves high accuracy, and the validation accuracy reaches 99.69% with corresponding training
+accuracy of 100%. Furthermore, the performance of GCCViT-SVM is compared to transfer learning-
+based models (demonstrating the effectiveness of incorporating attention based networks). GCCViT
+-SVM outperforms the transfer learning-based model, achieving higher validation accuracy and lower
+validation loss for all classes of the dataset. It outperforms VGG -16 by 11.2% and inception v3 by
+19.7% in terms of accuracy. The findings of this study highlight the benefits of data augmentation,
+the effectiveness of ViT for deep feature extraction with traditional remote sensing and image process-
+ing based GCC, and classification capability of traditional Machine learning classification algorithms,
+SVM for the scope of this experimentation. The model is then converted into TF. Lite model includes
+size reduction by quantization to ensure compatibility with IoT devices, which can then
+
+[4] Jayme Garcia Arnal Barbedo. A review on the main challenges in automatic plant disease iden-
+tification based on visible range images. Biosystems engineering, 144:52–60, 2016.
+[5] Abhishek Kumar Pradhan, Sudhansu Swain, and Jitendra Kumar Rout. Role of machine learning
+and cloud-driven platform in iot-based smart farming. In Machine Learning and Internet of Things
+for Societal Issues, pages 43–54. Springer Nature Singapore, 2022.
+[6] Shashwat Jha, Vishvaditya Luhach, and Raju Poddar. Retinal malady classification using ai:
+A novel vit-svm combination architecture. In 2022 6th International Conference on Computing
+Methodologies and Communication (ICCMC), pages 1659–1664. IEEE, 2022.
+[7] Yoshua Bengio and Yann LeCun.
+Scaling learning algorithms towards ai.
+Large-scale kernel
+machines, 34:1–41, 2007.
+[8] J¨urgen Schmidhuber. Deep learning in neural networks: An overview. Neural Networks, 61:85–117,
+2015.
+[9] Asghar Tabbakh and Somanath Satapathy Barpanda. Evaluation of machine learning models for
+plant disease classification using modified glcm and wavelet based statistical features. Traitement
+du Signal, 39(6):1893, 2022.
+[10] R. M Mohana, C Kishor Kumar Reddy, and P. R Anisha.
+A study and early identificatıon
+of leaf diseases in plants using convolutional neural network. In Smart Computing Techniques
+and Applications: Proceedings of the Fourth International Conference on Smart Computing and
+Informatics, Volume 2, pages 693–709. Springer Singapore, 2021.
+[11] Gargi Sachdeva, Parvinder Singh, and Pooja Kaur. Plant leaf disease classification using deep
+convolutional neural network with bayesian learning. Materials Today: Proceedings, 45:5584–5590,
+2021.
+[12] Mohammed A Jasim and Jaseem M Al-Tuwaijari. Plant leaf diseases detection and classifica-
+tion using image processing and deep learning techniques. In 2020 International Conference on
+Computer Science and Software Engineering (CSASE), pages 259–265. IEEE, 2020.
+[13] Jia Shijie, Jiang Peiyi, and Hou Siping. Auto
+
+nologies and Optimization (Trends and Future Directions)(ICRITO), pages 1–6. IEEE, 2021.
+[17] Waseem Haider, Aamer U Rehman, Nasruddin M Durrani, and Shahzad U Rehman. A generic
+approach for wheat disease classification and verification using expert opinion for knowledge-based
+decisions. IEEE Access, 9:31104–31129, 2021.
+[18] Jie Chen, Wei Wang, Dengwen Zhang, Atta Zeb, and Yashar A Nanehkaran. A attention embed-
+ded lightweight network for maize disease recognition. Plant Pathology, 70(3):630–642, 2021.
+[19] Jie Chen, Dengwen Zhang, Atta Zeb, and Yashar A Nanehkaran.
+Identification of rice plant
+diseases using lightweight attention networks.
+Expert Systems with Applications, 169:114514,
+2021.
+[20] Pragya S Thakur, Preeti Khanna, Tarkeshwari Sheorey, and Ajita Ojha. Vision transformer for
+plant disease detection: Plantvit. In International Conference on Computer Vision and Image
+Processing, pages 501–511. Springer International Publishing, 2021.
+16
+[21] Chao Feng, Han Zhang, Shuai Wang, Yilin Li, Hongli Wang, and Fei Yan. Structural damage
+detection using deep convolutional neural network and transfer learning. KSCE Journal of Civil
+Engineering, 23:4493–4502, 2019.
+[22] Asghar Tabbakh and Somanath Satapathy Barpanda. A deep features extraction model based on
+the transfer learning model and vision transformer” tlmvit” for plant disease classification. IEEE
+Access, 2023.
+[23] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez,
+and Illia Polosukhin. Attention is all you need. In Advances in Neural Information Processing
+Systems, volume 30, 2017.
+[24] Jimmy Lei Ba, Jamie Ryan Kiros, and Geoffrey E Hinton. Layer normalization. arXiv preprint
+arXiv:1607.06450, 2016.
+[25] R E Gray and R M Ewers. Monitoring forest phenology in a changing world. Forests, 12(3):297,
+2021.
+[26] Gaurav Misra, Fergus Cawkwell, and Angela Wingler.
+Status of phenological research using
+sentinel-2 data: A review. Remote Sensing, 12(17):2760, 2020.
+[27] A. M. Reid
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > Table 7: Performance Comparison with recent work on Plant Village
+Referred studies
+Algorithm (classification)
+Accuracy
+Precision
+Recall
+F1-Score
+Tabbakh and Barpanda, 2022[9]
+Machine
+learning
+model using LGBM
+model
+0.9439
+0.9475
+0.9476
+0.9472
+Mohana et al., 2021 [10]
+CNN
+0.9677
+0.9646
+0.9625
+0.9635
+Sachdeva et al., 2021[11]
+Deep
+Convolutional
+neural network with
+Bayesian learning
+0.989
+0.982
+0.979
+0.9804
+Jasim and Al-Tuwaijari, 2020[12]
+CNN
+0.9803
+0.9827
+0.9801
+0.9814
+Shijie, et al., 2017 [13]
+VGG16
+0.88
+-
+-
+-
+Karthik et al., 2020[35]
+Attention
+and
+the
+residual network
+0.9583
+0.962
+0.956
+0.9589
+Chen et al., 2021a [18]
+DenseNet along with
+attention approach
+0.9794
+0.8959
+0.8671
+0.8807
+Chen et al., 2021b [19]
+pre-trained
+MobileNet-V2
+and
+attention mechanism
+0.9668
+0.9749
+0.9583
+0.9664
+Thakur et al., 2021 [20]
+PlantViT
+0.9861
+0.9824
+0.9833
+0.9828
+Tabbakh and Barpanda, 2023[22]
+TLMViT
+(VGG19
+followed by ViT )
+0.9881
+0.9872
+0.9876
+0.9873
+Proposed model
+GCCViT-SVM
+(GCC and ViT out-
+put featu
+
+
+================================================================================
+PAPER 12 (2025): 12_2025_Efficient_Leaf_Disease_Classification_and_Segmentation_using_2505.21316.pdf
+Total Pages: 6
+================================================================================
+
+--- IDENTIFIED SECTIONS ---
+tant channel-specific information. To address this limitation,
+we integrate Squeeze-and-Excitation (SE) [8, 25] blocks into
+CNN architectures to incorporate channel-wise attention.
+The SE block processes input tensor X ∈RH×W ×C
+through three sequential operations. First, the Squeeze op-
+eration applies global average pooling to compress spatial
+dimensions (H × W) into channel-wise descriptors:
+zc =
+1
+H × W
+H
+X
+i=1
+W
+X
+j=1
+X(i, j, c),
+(2)
+where zc represents the global information for channel c.
+Next, the Excitation step computes channel-wise attention
+weights using two fully connected layers with a bottleneck
+structure:
+s = σ(W2 ReLU(W1z)),
+(3)
+Fig. 3: Overview of the Proposed Workflow.
+where z = [z1, z2, . . . , zC] is the squeezed feature vector,
+W1 ∈RC/r×C and W2 ∈RC×C/r are learnable parame-
+ters, r is the reduction ratio, and σ is the sigmoid activation
+producing attention weights s. Finally, the Recalibration op-
+eration applies these attention weights to scale the original
+feature maps channel-wise:
+X′(i, j, c) = s(c) · X(i, j, c),
+(4)
+where X′ is the recalibrated output tensor. SE blocks are in-
+tegrated after each convolutional block, enhancing feature ex-
+traction at all abstraction levels. The complete SE-ConvNet
+pipeline is detailed in Algorithm 1.
+Algorithm 1 Image Classification with SE-ConvNet
+1: Preprocess Image: Resize RGB image to (H, W, C)
+2: Normalize Image: tanh
+
+image resized
+127.5
+−1.0
+
+3: Return: Mid-Point Normalized image
+4: SE Block: GAP →FC-ReLU →FC-Sigmoid →Scale
+5: Return: Recalibrated tensor X′
+6: Model Architecture: Conv layers with SE Blocks, pool-
+ing, dropout, FC layers, and softmax output.
+Training configuration includes input images resized to
+224×224 pixels with three RGB channels and batch size 16,
+utilizing TensorFlow’s tf.data API for efficient data han-
+dling. The ReLU activation function introduces non-linearity,
+while L2 regularization and dropout layers prevent overfitting
+during training. Training is enhanced using earl
+
+5. RESULTS AND DISCUSSIONS
+In our study, we conducted experiments on classification and
+segmentation tasks.
+For classification, we evaluated Mo-
+bileNetV2, VGG16, CNN, and SE-ConvNet under different
+preprocessing techniques:
+Edge Detection, CLAHE, and
+MPN comparing results with raw data to assess their impact
+on accuracy.
+Models
+Resized
+Edge
+CLAHE
+MPN
+Size (MB)
+MobileNetV2
+0.37
+0.23
+0.76
+0.239
+30.41
+VGG16
+0.81
+0.77
+0.83
+0.24
+64.92
+CNN
+0.86
+0.79
+0.86
+0.91
+99.46
+SE-ConvNet
+0.91
+0.83
+0.87
+0.93
+28.29
+Table 1: Classification Accuracies of Various Image Pre-
+processing Techniques.
+Classification results (Table 1) showed MobileNetV2 per-
+forming the lowest, peaking at 76% with CLAHE, while
+VGG16 improved to 83%. The CNN with MPN achieved
+91%, and SE-ConvNet outperformed all models, reaching
+93%, highlighting its effectiveness alongside advanced pre-
+processing.
+Classes
+Precision
+Recall
+F1-Score
+Bacterial Leaf Disease
+0.90
+0.88
+0.89
+Fungal Brown Spot Disease
+0.97
+0.99
+0.98
+Dried Leaf
+1.00
+1.00
+1.00
+Healthy Leaf
+0.86
+0.88
+0.87
+Accuracy: 0.93
+Macro Average
+0.93
+0.93
+0.93
+Table 2: Performance Metrics of the Best Performing Model.
+SE-ConvNet (Table 2) excelled in classifying four leaf
+disease categories: Bacterial Leaf Disease, Fungal Brown
+Spot Disease, Dried Leaf, and Healthy Leaf, achieving 93%
+accuracy with average precision, recall, and F1-score of 0.93.
+The model performed exceptionally well in detecting Dried
+Leaf (precision, recall, F1 = 1.00) and Fungal Brown Spot
+Fig. 4: Confusion Matrix from the SE-ConvNet.
+(0.97, 0.99, 0.98). However, Bacterial Leaf (0.90, 0.88, 0.89)
+and Healthy Leaf (0.86, 0.88, 0.87) showed slight misclassi-
+fication due to feature similarities, as shown in the confusion
+matrix (Fig. 4). Notably, 8 Healthy Leaves were misclassi-
+fied as Bacterial Leaf Disease and 9 vice versa, indicating
+overlapping features.
+Models
+IoU (%)
+Dice (%)
+U-Net
+55.755
+70.791
+U-Net + Attention
+58.536
+72.444
+Table 3: Performance Metrics Comparison Between U-Net
+and U-Net
+
+Discussion. Our study highlights that preprocessing must
+be dataset-specific, with our SE-ConvNet architecture achiev-
+ing 93% classification accuracy, significantly outperforming
+MobileNetV2 and VGG16 by 17% and 10% respectively.
+Misclassifications between Healthy and Bacterial Leaf im-
+ages stemmed from feature inconsistencies, with some bacte-
+rial symptoms appearing only at leaf edges, underscoring the
+need for high-quality labeled datasets. GradCAM++ (Fig. 6)
+confirms the model’s focus on disease regions, enhancing
+interpretability while demonstrating attention mechanism ef-
+fectiveness.
+Additionally, our model is 7.5% smaller than
+MobileNetV2 and 56.5% smaller than VGG16, achieving
+superior performance with computational efficiency. For seg-
+mentation, U-Net with SE blocks improved IoU to 58.54%
+and Dice to 72.44%, representing substantial gains over base-
+line.
+Notably, MPN outperformed CLAHE due to better
+preservation of local contrast and fine edge details, with ab-
+lation studies showing precision improvements from 0.76 to
+0.90 for Bacterial Leaf Disease. While our approach incor-
+porates SE blocks for attention-based feature recalibration, it
+relies on a single attention head, which may limit complex
+inter-class feature capture.
+
+Future research could explore
+multi-head attention mechanisms and deeper architectures to
+enhance robustness across varying environmental conditions.
+(a) Original Image
+(b) GradCam Colormap
+Fig. 6: Feature Visualization using GradCAM++.
+
+6. CONCLUSION
+This study demonstrates the effectiveness of integrating Mid-
+Point Normalization (MPN) with attention mechanisms for
+plant disease detection.
+Our SE-ConvNet achieved 93%
+classification accuracy, outperforming traditional lightweight
+models by significant margins while maintaining computa-
+tional efficiency with a compact architecture. The integration
+of SE blocks enhanced both classification and segmenta-
+tion tasks, with U-Net achieving 72.44% Dice score and
+58.54% IoU. The findings confirm that tailored preprocessing
+combined with attention-based feature recalibration enables
+lightweight models to achieve superior performance, making
+them suitable for deployment in resource-constrained agri-
+cultural environments and extensible to other domains facing
+
+similar computational challenges.
+7. REFERENCES
+[1] L. C. Ngugi, M. Abelwahab, and M. Abo-Zahhad, “Re-
+cent advances in image processing techniques for auto-
+mated leaf pest and disease recognition–a review,” In-
+formation processing in agriculture, vol. 8, no. 1, pp.
+27–51, 2021.
+[2] M. Nawaz, T. Nazir, A. Javed, M. Masood, J. Rashid,
+J. Kim, and A. Hussain, “A robust deep learning ap-
+proach for tomato plant leaf disease localization and
+classification,” Scientific reports, vol. 12, no. 1, p.
+18568, 2022.
+[3] W. Li, X. Yu, C. Chen, and Q. Gong, “Identification and
+localization of grape diseased leaf images captured by
+uav based on cnn,” Computers and Electronics in Agri-
+culture, vol. 214, p. 108277, 2023.
+[4] M. E. Pothen and M. L. Pai, “Detection of rice leaf
+diseases using image processing,” in 2020 fourth inter-
+national conference on computing methodologies and
+communication (ICCMC).
+IEEE, 2020, pp. 424–430.
+[5] M. Sandler, A. Howard, M. Zhu, A. Zhmoginov, and
+L.-C. Chen, “Mobilenetv2: Inverted residuals and lin-
+ear bottlenecks,” in Proceedings of the IEEE Conference
+on Computer Vision and Pattern Recognition (CVPR),
+2018, pp. 4510–4520.
+[6] K. Simonyan and A. Zisserman, “Very deep convo-
+lutional networks for large-scale image recognition,”
+arXiv preprint arXiv:1409.1556, 2014.
+[7] K. Zuiderveld, “Contrast limited adaptive histogram
+equalization,” in Graphics gems IV.
+Academic Press
+Professional, Inc., 1994, pp. 474–485.
+[8] J. Hu, L. Shen, and G. Sun, “Squeeze-and-excitation
+networks,” in Proceedings of the IEEE conference on
+computer vision and pattern recognition, 2018, pp.
+7132–7141.
+[9] O. Mzoughi and I. Yahiaoui, “Deep learning-based seg-
+mentation for disease identification,” Ecological Infor-
+matics, vol. 75, p. 102000, 2023.
+[10] L. Divyanth, A. Ahmad, and D. Saraswat, “A two-stage
+deep-learning based segmentation model for crop dis-
+ease quantification based on corn field imagery,” Smart
+Agricultural Technology, vol. 3, p. 100108, 2023.
+[11] O. Ro
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > to high computational costs and larger models, potentially
+overlooking important information.
+Unlike previous studies focusing on handcrafted features,
+traditional CNNs, or transfer learning, our work integrates SE
+blocks in CNNs to enhance channel-wise feature represen-
+tation. Additionally, our segmentation pipeline incorporates
+tailored U-Net architecture with optimized loss functions and
+augmentation strategies, ensuring superior disease detection
+in betel leaves.
+4. METHODOLOGY
+This research proposes a systematic approach to betel leaf
+disease classification and segmentation using deep learning
+models. We emphasize accuracy, computational efficiency,
+and interpretability throughout our image processing and
+model evaluation pipeline.
+The complete process is illus-
+trated in Fig. 3.
+For classification, we employ lightweight models Mo-
+bileNetV2 [5] and VGG16 [6], alongside our proposed
+SE-ConvNet architecture. VGG16’s 16-layer network with
+3×3 convolution filters effectively capture
+
+
+================================================================================
+PAPER 13 (2026): 13_2026_TinyBayes_Closed-Form_Bayesian_Inference_via_Jacobi_Prior_fo_2605.06333.pdf
+Total Pages: 14
+================================================================================
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > Ali Sharif Razavian, Hossein Azizpour, Josephine Sullivan, and Stefan Carlsson. CNN features
+off-the-shelf: An astounding baseline for recognition. In IEEE Conference on Computer Vision
+and Pattern Recognition Workshops, pages 806–813, 2014.
+Matt Taddy. Distributed multinomial regression. The Annals of Applied Statistics, 9(3):1394–1414,
+2015.
+Appendix
+Proof of Theorem 1. : Fix k ∈{1, . . . , K}. Following the construction of Das and Sardar [2025,
+Theorem 2.3], define the per-class objective in βk-space by
+Qn,k(βk) = 1
+n
+n
+X
+i=1
+ℓk
+ Yik, x⊤
+i βk
+
++ 1
+n log π(k)
+J (βk),
+so that ˜β
+(n)
+k
+= arg maxβk Qn,k(βk), and the per-class objective in ηk-space by
+Rn,k(ηk) = 1
+n
+n
+X
+i=1
+ℓk(Yik, ηik) + 1
+n log π(k)
+n (ηk),
+so that the per-observation maximisers ˆηik = arg maxηik log π(k)
+n (ηik | Yik) together form ˆηk =
+arg maxηk Rn,k(ηk), with ˆβ
+(n)
+k
+= (X⊤X)−1X⊤ˆηk.
+Step 1 (vanishing prior contribution). By Assumption (B2), log π(k)
+J
+is continuous on Bε(β0,k).
+For any compact K1
+⊂
+Bε(β0,k), cont
+
+
+================================================================================
+PAPER 14 (2025): 14_2025_AI_in_Agriculture_A_Survey_of_Deep_Learning_Techniques_for_C_2507.22101.pdf
+Total Pages: 43
+================================================================================
+
+--- IDENTIFIED SECTIONS ---
+and future directions,” Neurocomputing, p. 127932, 2024. 24
+[277] B. Xu, W. Wang, G. Falzon, P. Kwan, L. Guo, G. Chen, A. Tait, and
+D. Schneider, “Automated cattle counting using mask r-cnn in
+quadcopter vision system,” Computers and Electronics in Agriculture,
+vol. 171, p. 105300, 2020. 24
+[278] T. D. Pereira, N. Tabris, A. Matsliah, D. M. Turner, J. Li, S. Ravin-
+dranath, E. S. Papadoyannis, E. Normand, D. S. Deutsch, Z. Y.
+Wang et al., “Sleap: A deep learning system for multi-animal pose
+tracking,” Nature methods, vol. 19, no. 4, pp. 486–495, 2022. 24
+[279] A. Compte Prades, “Animal tracking and identification in smart
+farms,” Master’s thesis, Universitat Polit`ecnica de Catalunya, 2024.
+24
+[280] X. Huang, Z. Hu, Y. Qiao, and S. Sukkarieh, “Deep learning-based
+cow tail detection and tracking for precision livestock farming,”
+IEEE/ASME Transactions on Mechatronics, vol. 28, no. 3, pp. 1213–
+1221, 2022. 24
+[281] Z. Zheng, X. Zhang, L. Qin, S. Yue, and P. Zeng, “Cows’ legs
+tracking and lameness detection in dairy cattle using video
+analysis and siamese neural networks,” Computers and electronics
+in agriculture, vol. 205, p. 107618, 2023. 24
+[282] X. Yang, R. B. Bist, B. Paneru, and L. Chai, “Deep learning methods
+for tracking the locomotion of individual chickens,” Animals,
+vol. 14, no. 6, p. 911, 2024. 24
+[283] J. K. Kakar, S. Hussain, S. C. Kim, and H. Kim, “Timetector: A
+twin-branch approach for unsupervised anomaly detection in
+livestock sensor noisy data (tt-tbad),” Sensors, vol. 24, no. 8, p.
+2453, 2024. 24
+[284] Z. H. Ismail, A. K. K. Chun, and M. I. S. Razak, “Efficient herd–
+outlier detection in livestock monitoring system based on density–
+based spatial clustering,” IEEE Access, vol. 7, pp. 175 062–175 070,
+2019. 24, 28
+[285] H. Park, D. Park, and S. Kim, “Anomaly detection of operating
+equipment in livestock farms using deep learning techniques,”
+Electronics, vol. 10, no. 16, p. 1958, 2021. 24
+[286] J. Jiang, Y. Shu, J. Wang, and M. Long, “Transferability
+
+international challenges (Visual Object Tracking
+VOT: 1st 2014 and 2018, 2nd 2015, 1st 2016; VOT-TIR: 1st 2015 and
+2016; OpenCV Tracking: 1st 2015; 1st PASCAL VOC Segmentation and
+Action Recognition tasks 2010). He received the best paper award in
+the computer vision track at IEEE ICPR 2016. He has published more
+than 100 peer-reviewed conference papers, journal articles, and book
+contributions. His research interests include a wide range of topics within
+computer vision and machine learning. He serves as a regular senior
+program committee member for leading conferences such as CVPR,
+ICCV, and NeurIPS.
+Hisham Cholakkal received the MTech degree
+from IIT Guwahati, India, and the PhD degree
+from Nanyang Technological University, Singa-
+pore. He is an assistant professor with the MBZ
+University of Artificial Intelligence (MBZUAI), UAE.
+Previously, from 2018 to 2020, he worked as a
+research scientist with the Inception Institute of
+Artificial Intelligence, UAE; from 2016 to 2018, he
+worked as a senior technical lead with Mercedes-
+Benz R&D India. He has also worked as a re-
+searcher with BEL-Central Research Lab, India,
+and Advanced Digital Sciences Center, Singapore. He has organized
+workshops at top venues such as ICCV 2023, NeurIPS 2022, and ACCV
+2022 and regularly serves as a program committee member for top
+conferences, including CVPR, ICCV, NeurIPS, ICLR, and ECCV.
+Salman Khan received the PhD degree from the
+University of Western Australia, in 2016. He is an
+associate professor with the MBZ University of Ar-
+tificial Intelligence. He has been an adjunct faculty
+with the Australian National University since 2016.
+He has been awarded the Outstanding Reviewer
+award at IEEE CVPR multiple times, won the
+Best Paper award at 9th ICPRAM 2020, and
+won 2nd prize in the NTIRE Image Enhancement
+Competition alongside CVPR 2019. He served as
+a (senior) program committee member for several
+premier conferences, including CVPR, ICCV, ICML, ECCV, and NeurIPS.
+His thesis received a
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > 40
+[251] J. Liu, A. T. Becerra, J. F. Bienvenido-Barcena, X. Yang, Z. Zhao, and
+C. Zhou, “Cffi-vit: enhanced vision transformer for the accurate
+classification of fish feeding intensity in aquaculture,” Journal of
+Marine Science and Engineering, vol. 12, no. 7, p. 1132, 2024. 21
+[252] J. Lai, F. Yang, D. Huang, S. Huang, and X. Sun, “Artificial
+reef design and flow field analysis for enhancing stichopus
+japonicus cultivation in haizhou bay,” Journal of Marine Science and
+Engineering, vol. 12, no. 7, p. 1130, 2024. 21
+[253] R. J. Veiga and J. M. Rodrigues, “Fine-grained fish classification
+from small to large datasets with vision transformers,” IEEE Access,
+2024. 21
+[254] S. Pavithra et al., “An efficient approach to detect and segment
+underwater images using swin transformer,” Results in Engineering,
+vol. 23, p. 102460, 2024. 21
+[255] Y. Zhou, Z. Mao, Z. Mao, X. Zhang, L. Zhang, and H. Huang,
+“Benthic mapping of coral reef areas at varied water depths using
+integrated active and passiv
+
+
+================================================================================
+PAPER 15 (2025): 15_2025_Enhancing_Leaf_Disease_Classification_Using_GAT-GCN_Hybrid_M_2504.04764.pdf
+Total Pages: 17
+================================================================================
+
+--- IDENTIFIED SECTIONS ---
+Conclusion
+An architecture using the GCN-GAT hybrid model was analyzed for leaf disease detection, leveraging the spatial
+feature-capturing capabilities of Graph Convolution Networks (GCN) and the feature prioritization strengths of Graph
+Attention Networks (GAT). The model was trained and evaluated on three diverse datasets: apple leaves (3 classes),
+potato leaves (3 classes), and sugarcane leaves (5 classes), representing varied leaf conditions. To highlight the
+superiority of the hybrid model, its performance was thoroughly analyzed and compared against the standalone GCN
+and GAT models.
+The hybrid model exhibited superior performance across the datasets. On the apple dataset, it achieved a precision of
+0.9974, recall of 0.9974, and an F1-score of 0.9974, with an average loss of 0.0143. For the potato dataset, the model
+achieved precision, recall, and F1-scores of 0.9811, 0.9811, and 0.9811, respectively, with an average loss of 0.0548.
+Despite the complexity of the sugarcane dataset, the model maintained robust results, achieving precision, recall, and
+F1-scores of 0.9124, 0.9104, 0.9101 each, with an average loss of 0.2651. These metrics underscore the adaptability
+and effectiveness of the hybrid model, with average accuracies of 99.74% for apple leaves, 98.11% for potato leaves,
+and 91.03% for sugarcane leaves.
+For comparison, the standalone GCN and GAT models delivered lower metrics across all datasets. On the apple dataset,
+the GCN model achieved a precision of 0.9443, recall of 0.9438, and an F1-score of 0.9436, with an average loss of
+0.0345, while the GAT model achieved a precision of 0.9521, recall of 0.9519, and an F1-score of 0.9517, with an
+average loss of 0.0302. On the potato dataset, GCN recorded precision, recall, and F1-scores of 0.9134, 0.9129, and
+0.9127, with an average loss of 0.0386, whereas GAT achieved precision, recall, and F1-scores of 0.9291, 0.9286, and
+0.9284, with an average loss of 0.0331. For the sugarcane dataset, GCN and GAT show
+
+Beyond current implementations, future work could focus on optimizing the computational efficiency of the hybrid
+model to facilitate its deployment on low-power devices. The integration of the proposed model into a real-time
+agricultural framework has the potential to revolutionize disease detection systems, ensuring healthier crops, reducing
+losses, and contributing to crop security.
+Conflict of Interest Statement
+To the best of our knowledge, there are no conflicts of interest.
+References
+[1] E-C Oerke. Crop losses to pests. The Journal of agricultural science, 144(1):31–43, 2006.
+[2] George N. Agrios. Plant Pathology. Academic Press, San Diego, CA, 5th edition, 2005.
+[3] Abbas Jafar, Nabila Bibi, Rizwan Ali Naqvi, Abolghasem Sadeghi-Niaraki, and Daesik Jeong. Revolutionizing
+agriculture with artificial intelligence: plant disease detection methods, applications, and their limitations. Frontiers
+in Plant Science, 15:1356260, 2024.
+[4] Sunil S Harakannanavar, Jayashri M Rudagi, Veena I Puranikmath, Ayesha Siddiqua, and R Pramodhini. Plant
+leaf disease detection using computer vision and machine learning algorithms. Global Transitions Proceedings,
+3(1):305–310, 2022.
+[5] Madallah Alruwaili, Saad Alanazi, Sameh Abd El-Ghany, and Abdulaziz Shehab. An efficient deep learning
+model for olive diseases detection. International Journal of Advanced Computer Science and Applications, 10(8),
+2019.
+[6] Mengying Sun, Sendong Zhao, Coryandar Gilvary, Olivier Elemento, Jiayu Zhou, and Fei Wang.
+Graph
+convolutional networks for computational drug development and discovery. Briefings in bioinformatics, 21(3):919–
+935, 2020.
+[7] Xin Wei, Ruixuan Yu, and Jian Sun. View-gcn: View-based graph convolutional network for 3d shape analysis. In
+Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 1850–1859, 2020.
+15
+Enhancing Leaf Disease Classification Using GAT-GCN Hybrid Model
+A PREPRINT
+[8] Lei Wang, Yuchun Huang, Yaolin Hou, Shenman Zhang, and Jie Sh
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > Enhancing Leaf Disease Classification Using GAT-GCN Hybrid Model
+A PREPRINT
+(a) GCN - Potato Leaf Dataset
+(b) GAT - Potato Leaf Dataset
+(c) GCN-GAT Hybrid - Potato Leaf
+Dataset
+Figure 12. Confusion matrices for GCN, GAT, and GCN-GAT models on the Potato Leaf Disease dataset.
+(a) GCN - Sugarcane Leaf Dataset
+(b) GAT - Sugarcane Leaf Dataset
+(c) GCN-GAT Hybrid - Sugarcane Leaf
+Dataset
+Figure 13. Confusion matrices for GCN, GAT, and GCN-GAT models on the Sugarcane Leaf Disease dataset.
+Fig. 14 highlights the overall accuracy of all the three architectures across multiple datasets, demonstrating the superior
+performance of the GCN-GAT Hybrid model in consistently achieving higher classification accuracy compared to GCN
+and GAT.
+Figure 14. Graph depicting the accuracy of GCN, GAT, and the proposed GCN+GAT models for the classification of
+diseases on Apple, Sugarcane, and Potato leaves datasets.
+14
+Enhancing Leaf Disease Classification Using GAT-GCN Hybrid Model
+A PREPRINT
+5
+Conclusion
+An ar
+
+
+================================================================================
+PAPER 16 (2022): 16_2022_Explainable_vision_transformer_enabled_convolutional_neural__2207.07919.pdf
+Total Pages: 21
+================================================================================
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > Thakur et al.
+Figure 10: Grad-CAMs for (1) Apple, (2) Embrapa, (3) Maize, (4) PlantVillage, and (5) Rice datasets. (a) input image
+(b) Karthik et al. [15] (c) Chen et al. [16] (d) Chen et al. [19] (e) Chen et al. [18] (f) Zhao et al. [20] (g) PlantXViT
+18
+Thakur et al.
+Figure 11: LIME for (1) Apple, (2) Embrapa, (3) Maize, (4) PlantVillage, and (5) Rice datasets. (a) input image (b)
+Karthik et al. [15] (c) Chen et al. [16] (d) Chen et al. [19] (e) Chen et al. [18] (f) Zhao et al. [20] (g) PlantXViT
+19
+Thakur et al.
+Table 7: Comparison of the trainable parameters and FLOPs
+Approach
+Total
+params(M)
+Trainable
+params(M)
+GFLOPs
+Memory (MB)
+Karthik et al. [15]
+0.72
+0.72
+3.59
+2.8
+Chen et al. [16]
+0.82
+0.82
+3.4
+0.76
+Chen et al. [19]
+4.32
+2.06
+0.78
+16.8
+Chen et al. [18]
+4.32
+2.06
+0.83
+16.9
+Zhao et al. [20]
+6.71
+6.71
+11.9
+25.8
+PlantXViT
+0.85
+0.85
+11.8
+3.4
+note that the model outperforms other state-of-the-art models in efﬁciently identifying plant diseases. The model is also
+evaluated for the in
+
+
+================================================================================
+PAPER 17 (2026): 17_2026_Enhancing_Precision_Agriculture_with_a_Hybrid_Deep_Learning__2606.15282.pdf
+Total Pages: 22
+================================================================================
+
+--- IDENTIFIED SECTIONS ---
+Future Work
+Whereas our recent paper is highly accurate and interpretability for multi-class
+classification of plant diseases. Some things still have to be attempted. Connecting
+Multi-modal data, environmental parameters or hyperspectral imagery, could also
+20
+
+
+improve model power and broad-based generalizability with practical application.
+Optimizing small models like MobileNetV2 or EfficientNet-B0 deployment for mobile
+or drones deployment would allow for real-time detection of diseases right in the field.
+Aligning better with segmentation masks and explainability results, i.e., Gradient-based
+CAM and Saliency Maps, by attention-guided learning or higher segmentation
+networks might supply more accurate interpretability. Additionally, broadening the
+models for handling novel or rare diseases with low-shot learning or domain techniques
+would enhance practical usability. Designing quantitative measures to observe fidelity
+to explainability procedures would allow for a more rigorous interpretability
+assessment. Lastly, analyzing temporal disease progression inspection using sequential
+leaf images and semi-supervised or self-supervised learning techniques would also
+boost performance, additionally, while eliminating dependence on large-scale manual
+annotations
+
+6
+
+Conclusion
+This research created a deep learning pipeline to detect multi-class plant diseases
+with more than 19,000 leaf images from 38 classes. ResNet-50 produced the optimum
+results (98.7 accuracy, 0.998 AUC), demonstrating that residual CNNs are still
+remarkably effective, while MobileNetV2 served as a lightweight equivalent for
+deployment-on-device. Interpretability was handled using Grad-CAM, saliency maps,
+and lesion segmentation that showed models rely heavily on symptomatic areas with
+resultant decisions being more transparent and reliable for agricultural applications.
+Though results are robust, caveats persist: a majority were taken from controlled
+environments, underrepresented classes could have compromised balance, and a large-
+scale outdoor valuation was not performed. In-field performance might be subject to
+
+lighting effects, occlusion, as well as environmental variation. Future work is thus
+needed to add more heterogeneous datasets, smartphone images collected from farmers,
+as well as incorporation of situational variables such as climate and soils.
+This pipeline illustrates the possibilities of marrying high accuracy with
+interpretability for monitoring plant growth. More work on data variety, refinement of
+segmentations, and deployment onto edge hardware would allow such systems to
+enable farmers and agronomists with trustworthy decision- support tools directly
+benefiting sustainable agriculture and worldwide food security.
+References
+1. A. Brahimi, K. Boukhalfa, and A. Moussaoui, “Deep Learning for Tomato Diseases: Classification
+and Symptoms Visualization,” Applied Artificial Intelligence, vol. 31, no. 4, pp. 299–315, 2017.
+2. S. P. Mohanty, D. P. Hughes, and M. Salathe´, “Using Deep Learning for Image-Based Plant
+Disease Detection,” Frontiers in Plant Science, vol. 7, p. 1419, 2016.
+3. S. Ferentinos, “Deep Learning Models for Plant Disease Detection and Diagnosis,” Computers and
+Electronics in Agriculture, vol. 145, pp. 311–318, 2018.
+4. C. W. Too, L. Yujian, S. Njuki, and L. Yingchun, “A Comparative Study of Fine-Tuning Deep
+Learning Models for Plant Disease Identification,” Computers and Electronics in Agriculture,
+21
+
+
+vol. 161, pp. 272–279, 2019.
+5. A. Berdin and M. Caduyac, “Tomato Leaf Disease Classification Using Residual Networks
+(ResNet),” International Journal of Advanced Com- puter Science and Applications (IJACSA),
+vol. 10, no. 6, pp. 1–7, 2019.
+6. M. Tan and Q. V. Le, “EfficientNet: Rethinking Model Scaling for Convolutional Neural
+Networks,” in Proc. International Conference on Machine Learning (ICML), pp. 6105–6114,
+2019.
+7. A. Howard, M. Sandler, G. Chu, et al., “MobileNets: Efficient Convolu- tional Neural Networks
+for Mobile Vision Applications,” arXiv preprint arXiv:1704.04861, 2017.
+8. A. Dosovitskiy, L. Beyer, A. Kolesnikov, et al., “An Image 
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > 19 
+ 
+ 
+4.8 
+Segmentation vs Explainability Comparison 
+For typical cases, high-activation regions in Grad-CAM and saliency maps 
+overlapped substantially with the segmented tumor masks to reveal that the model 
+properly emphasizes on associated pathological areas. Slight differences were observed 
+at tumor margins or by low-contrast MRI slices for which maximum benefit to attention 
+localization. Merging segmentation with interpretability yields a dual-check system 
+that ensures accurate anatomical localization, but XAI centers decision-driving 
+attributes used by the model. This comparison demonstrates that model interpretability 
+is aligned with anatomical support, reinforcing reliance on automated prediction for 
+diagnosis. It also emphasizes the complementarity be- tween segmentation and XAI, 
+where segmentation guarantees accurate localization, and XAI supplies an 
+understanding of model thinking. Fig. 14 and Fig. 15 shows the XAI Grad-CAM output, 
+visualizing the regions of the 
+
+
+================================================================================
+PAPER 18 (2025): 18_2025_A_Domain-Adapted_Lightweight_Ensemble_for_Resource-Efficient_2512.13428.pdf
+Total Pages: 12
+================================================================================
+
+--- IDENTIFIED SECTIONS ---
+applications, and challenges,” Plant Methods, vol. 18, no. 1, p. 28,
+2022. [Online]. Available: https://plantmethods.biomedcentral.com/artic
+les/10.1186/s13007-022-00866-2
+[9] J.
+Sun,
+W.
+Cao,
+X.
+Fu,
+S.
+Ochi,
+and
+T.
+Yamanaka,
+“Few-
+shot learning for plant disease recognition: A review,” Agronomy
+Journal, vol. 116, no. 3, pp. 1204–1216, 2023. [Online]. Available:
+https://acsess.onlinelibrary.wiley.com/doi/abs/10.1002/agj2.21285
+[10] N. Ragu and J. Teo, “Object detection and classification using few-shot
+learning in smart agriculture: A scoping mini review,” Frontiers in
+Sustainable Food Systems, vol. 6, Jan. 2023. [Online]. Available:
+https://www.frontiersin.org/journals/sustainable-food-systems/articles/
+10.3389/fsufs.2022.1039299/full
+[11] L. Wei, J. Tang, J. Chen, C. P. Mukamakuza, T. Zhang, and D. Zhang,
+“A lightweight few-shot learning model for crop pest and disease
+identification,” Artificial Intelligence Review, vol. 58, no. —, p. 329,
+2025. [Online]. Available: https://link.springer.com/article/10.1007/s104
+62-025-11323-6
+[12] A. Chelladurai, D. Manoj Kumar, S. S. Askar, and M. Abouhawwash,
+“Classification of tomato leaf disease using transductive long short-term
+memory with an attention mechanism,” Frontiers in Plant Science, vol.
+Volume 15 - 2024, 2025. [Online]. Available: https://www.frontiersin.
+org/journals/plant-science/articles/10.3389/fpls.2024.1467811
+[13] D. Joseph, P. Pawar, and K. Chakradeo, “Real-time plant disease dataset
+development and detection of plant disease using deep learning,” IEEE
+Access, vol. 12, pp. 16 310–16 333, 2024, publisher Copyright: © 2013
+IEEE.
+[14] Y. Liu, H. Zhang, W. Zhang, G. Lu, Q. Tian, and N. Ling, “Few-shot
+image classification: Current status and research trends,” Electronics,
+vol. 11, no. 11, p. 1752, 2022.
+[15] H. Gharoun, F. Momenifar, F. Chen, and A. H. Gandomi, “Meta-learning
+approaches for few-shot learning: A survey of recent advances,” arXiv
+(Cornell University), Mar 2023.
+[16] X. Wu, H. Deng, Q. Wang, L. L
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > TABLE II
+PERFORMANCE OF BASE FRAMEWORK [34] IN OUR EXPERIMENTAL SETUP-1 COMPARED TO OUR IMPLEMENTATION WITH ADVANCED FEATURE
+EXTRACTORS
+Feature Extractor
+Total Model Size
+(MB)
+GFLOPS Classifier
+1 Shot
+5 Shot
+10 Shot
+15 Shot
+Ensemble 5 ResNets 4 DenseNets
+900.01
+47.01
+Dense
+37.89 ± 0.99
+62.07 ± 0.98
+72.33 ± 0.81 76.93 ± 0.66
+Ensemble MaxViT, ConvNeXt, Swin
+Transformer (Ours)
+500.3
+22.98
+Dense
+40.17 ± 0.96
+65.05 ± 0.60
+74.11 ± 0.47 78.71 ± 0.43
+LSTM
+46.87 ± 1.16
+83.03 ± 0.85
+92.66 ± 0.52 95.27 ± 0.29
+Bi-LSTM 49.08 ± 1.15 89.85 ± 0.73 97.08 ± 0.34
+97.8 ± 0.44
+TABLE III
+EXPERIMENT WITH DIFFERENT LIGHTWEIGHT MODELS FOR FEATURE
+EXTRACTION WITH DENSE CLASSIFIER
+Model
+Model Size (MB)
+1 shot
+5 shot
+10 shot
+15 shot
+80 shot
+Tiny ViT
+81
+38.86±1.04 67.64±0.69 78.28±0.49 82.31±0.34 89.93±0.27
+Mobilevit
+4.85
+19.42±0.65 28.77±0.50 33.25±0.50 35.83±0.50 85.60±1.07
+MobileNetV3 Large
+20.92
+34.48±0.92 60.71±0.59 70.97±0.57 76.02±0.43 88.86±0.25
+RegNetX
+10.24
+34.47±0.87 58.64±0.65 67.56±0.54 72.46±0.41 84.
+
+
+================================================================================
+PAPER 19 (2025): 19_2025_STA-Net_A_Decoupled_Shape_and_Texture_Attention_Network_for__2509.03754.pdf
+Total Pages: 15
+================================================================================
+
+--- IDENTIFIED SECTIONS ---
+Discussion
+5.1
+Synergistic Effects of STAM and Channel Attention
+Experimental results indicate that the integration of the STAM and SE modules yields optimal
+performance. This outcome is not coincidental but rather stems from the complementary nature of
+their functionalities. The SE module, functioning as a channel attention mechanism, primarily identifies
+the most critical feature channels by learning interdependencies among channels; it enhances channels
+that are information-rich while suppressing those that are noisy or redundant. In contrast, the STAM
+module operates as a spatial attention mechanism by pinpointing the most significant spatial locations
+on the feature map, thereby achieving precise localization of lesion regions through specialized analysis
+of shape and texture.
+Collectively, these modules establish an efficient "serial filtering" process: the SE module initially
+performs a "content screening" of the features, after which the STAM module executes "spatial
+localization" on the refined, high-quality features. This approach ensures that the computationally
+intensive STAM module concentrates exclusively on the most pertinent regions, thus optimizing
+computational efficiency. The pronounced synergistic effect elucidated here not only clarifies why
+straightforward module stacking falls short of the performance achieved by our carefully structured
+combination, but also highlights the robustness of our methodological design.
+12
+5.2
+The Importance of Strategic Arrangement of the Attention Module
+In this study, the STAM module is not arbitrarily integrated into the network; instead, it is
+meticulously designed and strategically positioned at the terminal stages of the network’s intermediate
+phase, specifically where the feature map sizes are 28×28 and 14×14. This approach is grounded
+in a comprehensive understanding of the hierarchical nature of convolutional neural network (CNN)
+features.
+The shallow layers of the network are primarily responsible for cap
+
+analogous to expecting a pathologist to derive meaningful conclusions from a single pixel—neither
+yielding the desired pathological patterns nor avoiding the introduction of noise. In contrast, the
+intermediate phase serves as a "golden zone" for feature extraction. Here, the network has already
+learned relatively complex local patterns, and the feature maps retain high spatial resolution along with
+rich semantic information. These maps clearly delineate key discriminative characteristics, including
+lesion shape and contour, color halos, and surface textures, thus providing an optimal platform for the
+STAM module’s effective operation.
+In the subsequent deep layers, the network undergoes extensive abstraction and semantic processing,
+leading to a significant reduction in spatial information; on a 7×7 feature map, the original visual forms
+and textural details are essentially obliterated. Consequently, the application of the STAM module in
+these layers not only fails to deliver the anticipated benefits but may also disrupt the learned high-level
+semantic representations.
+Furthermore, positioning the STAM module at the end of a phase is a deliberate design choice.
+One may conceptualize a phase (for instance, the collection of blocks producing 28×28-sized features)
+as a "feature processing workshop," wherein multiple functional units iteratively refine, enhance, and
+combine features while maintaining spatial resolution. Only when the final block of the phase concludes
+its processing do the abstract features culminate in their most complete and mature form. Introducing
+the STAM module at this stage—as a "senior quality inspector"—ensures that decisions are based on
+the most information-rich and reliable feature maps, thereby facilitating the most accurate outcomes.
+6
+
+Conclusion
+This paper presents a novel lightweight deep learning model, STA-Net, designed to address the
+
+challenges of high-precision plant disease classification on resource-constrained edge devices. The model
+is underpinned by a dual optimization strategy. First, a training-free neural architecture search (NAS)
+method is applied to generate an efficient computational backbone network. Second, a novel Shape-
+Texture Attention Module (STAM) is introduced, which incorporates domain-specific prior knowledge.
+Specifically, STAM enhances feature learning by decomposing the spatial attention mechanism into two
+distinct branches: a shape-aware branch that captures lesion contours and a texture-aware branch that
+analyzes pathological patterns.
+Extensive experiments conducted on the public CCMT dataset demonstrate the efficacy of the
+proposed approach. The final model achieves a validation accuracy of 88.96% while maintaining an
+extremely low computational complexity of only 401,000 parameters and 51.1 million FLOPs. These
+results clearly surpass both the baseline model and models utilizing conventional attention mechanisms.
+Overall, this study offers a practical and efficient artificial intelligence solution for precision agriculture
+and validates a broader design principle: embedding domain-specific prior knowledge into the attention
+mechanism through a decoupled design can substantially enhance the performance of lightweight models
+in complex fine-grained recognition tasks.
+References
+[AAAAG23] James A Asenso, Emmanuel Akomeah, Richard K Arthur, and Vivian Adu-Gyamfi. Ccmt-
+9: A public dataset for crop classification and disease detection in cashew, cassava, maize,
+and tomato. Data in Brief, 48:109230, 2023.
+13
+[BDSS21]
+Andrew Brock, Soham De, Samuel L Smith, and Karen Simonyan. High-performance
+large-scale image recognition without normalization.
+In International conference on
+machine learning, pages 1059–1071. PMLR, 2021.
+[CDL+21]
+Wuyang Chen, Xinyu Dai, Hanxiao Liu, Dongdong Chen, and Lu Yuan. Neural architecture
+search on a budget: Taming the complexity of one-shot nas.
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > Table 4: Experimental Results
+Network
+Top-1 (%)
+Params (M)
+FLOPs (M)
+F1-Score
+MobileNetV3
+88.26
+1.698
+67.8
+88.21
+MobileNetV4
+89.23
+2.468
+184.7
+89.20
+Baseline (NAS-Backbone)
+86.84
+0.308
+43.1
+86.71
+Baseline + STAM
+87.41
+0.332
+50.8
+87.29
+Baseline + SE
+88.03
+0.378
+43.5
+87.94
+Baseline + CBAM
+87.20
+0.327
+44.1
+87.06
+Baseline + SE + STAM (Ours)
+89.00
+0.401
+51.1
+88.96
+The experimental results are presented in Table 4. Compared with the baseline model, the addition
+of the STAM module alone increased the Top-1 accuracy significantly—from 86.84% to 87.41%. This
+improvement validates the efficacy of our disease feature-oriented STAM module in capturing key visual
+information, outperforming the generic spatial-channel mixed attention mechanism (CBAM, 87.20%).
+Notably, while the STAM module boosts accuracy substantially, it only adds 0.024 million parameters,
+demonstrating remarkable parameter efficiency
+Our final model, which integrates both the SE and STAM modules (+SE+STAM), achieved
+the highest a
+
+
+================================================================================
+PAPER 20 (2025): 20_2025_MobilePlantViT_A_Mobile-friendly_Hybrid_ViT_for_Generalized__2503.16628.pdf
+Total Pages: 8
+================================================================================
+
+--- IDENTIFIED SECTIONS ---
+V. CONCLUSION AND FUTURE DIRECTION
+In this study, we introduce MobilePlantViT, a novel DL
+model for effective and generalized plant disease image clas-
+sification. Our model is computationally lightweight, making it
+well-suited for mobile and resource-constrained edge devices,
+with the broader goal of enhancing the accessibility and
+scalability of smart agricultural systems. To achieve efficiency
+without compromising accuracy, MobilePlantViT first extracts
+essential features via a stack of group convolutions that
+are fused with convolutional attention modules, progressively
+downsampling feature representations to reduce computational
+complexity before passing them to the encoder. Unlike conven-
+tional multi-head self-attention, which operates with quadratic
+complexity, our encoder leverages a self-attention mechanism
+with linear complexity, significantly improving scalability.
+Extensive experiments across multiple plant disease datasets,
+accompanied by an in-depth performance analysis from var-
+ious perspectives demonstrate that MobilePlantViT achieves
+not only promising classification performance but also gen-
+eralizes effectively across different instances of plant disease.
+In the future, further research could focus on adapting Mo-
+bilePlantViT to other agricultural image classification tasks,
+expanding its applicability within precision agriculture. Addi-
+tionally, exploring domain-specific pre-training could lead to
+improved performance and better generalizability, particularly
+for handling rare diseases or diverse environmental conditions,
+ultimately enhancing the model’s robustness across various
+agricultural domains.
+REFERENCES
+[1] Food and A. O. of the United Nations, “Faostat,” Rome, 2018, pp.
+403-403. [Online]. Available: http://faostat.fao.org
+[2] K. Simonyan, “Very deep convolutional networks for large-scale image
+recognition,” 2014, arXiv preprint arXiv:1409.1556.
+8
+[3] C. Szegedy, W. Liu, Y. Jia, P. Sermanet, S. Reed, D. Anguelov, D. Erhan,
+V. Vanhouc
+
+--- KEY PASSAGES (limitations/future work keywords) ---
+  > 5
+0
+20
+40
+60
+80
+100
+120
+140
+160
+Epochs
+0.5
+0.6
+0.7
+0.8
+0.9
+1.0
+Accuracy
+Training vs. Validation Accuracy
+Training (Random)
+Validation (Random)
+Training (Pre-trained)
+Validation (Pre-trained)
+(a) CCMT-Cashew
+0
+20
+40
+60
+80
+100
+120
+140
+160
+Epochs
+0.5
+0.6
+0.7
+0.8
+0.9
+Accuracy
+Training vs. Validation Accuracy
+Training (Random)
+Validation (Random)
+Training (Pre-trained)
+Validation (Pre-trained)
+(b) CCMT-Cassava
+0
+20
+40
+60
+80
+100
+120
+140
+Epochs
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+Accuracy
+Training vs. Validation Accuracy
+Training (Random)
+Validation (Random)
+Training (Pre-trained)
+Validation (Pre-trained)
+(c) CCMT-Maize
+0
+25
+50
+75
+100
+125
+150
+175
+200
+Epochs
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+Accuracy
+Training vs. Validation Accuracy
+Training (Random)
+Validation (Random)
+Training (Pre-trained)
+Validation (Pre-trained)
+(d) CCMT-Tomato
+Fig. 2. Effects of random and pre-trained weight initialization on the train vs. validation accuracy over epochs
+TABLE I
+EXPERIMENTAL SETUP AND DATA AUGMENTATION SUMMARY
+Attribu
+

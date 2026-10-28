@@ -1,0 +1,54 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# ---- Virtual environments ----
+.venv/
+venv/
+env/
+
+# ---- Data (never commit image datasets) ----
+data/raw/
+data/interim/
+data/processed/
+*.zip
+*.tar
+*.tar.gz
+
+# ---- Models / weights (too large for git) ----
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.tflite
+*.task
+*.gguf
+checkpoints/
+runs/
+wandb/
+
+# ---- Experiment outputs ----
+outputs/
+logs/
+*.log
+
+# ---- Keep these! (negated so splits + results stay versioned) ----
+!data/splits/*.csv
+!data/splits/*.json
+!results/**/*.json
+!results/**/*.csv
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ---- Research PDFs (large, re-downloadable via download_papers.py) ----
+research_papers/*.pdf
+
+# ---- Claude Code plugins (not part of this project) ----
+plugins/
