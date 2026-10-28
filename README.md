@@ -22,7 +22,10 @@ target, not a measurement.
 
 ## Setup
 
-Requires Python 3.14 (PyTorch 2.14.1 ships `cp314` wheels) and an NVIDIA GPU.
+Needs an NVIDIA GPU and Python 3.10 or newer; this laptop runs 3.14.6. Build the
+environment on each machine — never copy `.venv`, which only works where it was
+created. Install PyTorch first, in the CUDA build that suits the machine's GPU
+([pytorch.org](https://pytorch.org/get-started/locally/)); this laptop uses cu126:
 
 ```bash
 py -3.14 -m venv .venv
@@ -31,6 +34,10 @@ py -3.14 -m venv .venv
 pip install --index-url https://download.pytorch.org/whl/cu126 torch==2.14.1 torchvision
 pip install -r ml_pipeline/requirements.txt
 ```
+
+`ml_pipeline/requirements-lock.txt` records the exact version of every package
+behind the results. To train on another machine, see Part H of
+[docs/NEXT_STEPS.md](docs/NEXT_STEPS.md).
 
 Verify CUDA, packages and all four backbones:
 

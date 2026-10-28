@@ -36,6 +36,9 @@ A realistic schedule:
 
 While B, C and D train, work on the parallel track (below).
 
+**Training on a bigger machine instead of this laptop?** Read Part H before the
+first paper run.
+
 ---
 
 ## Part A — One-time setup (15 minutes)
@@ -132,7 +135,7 @@ yourself: Settings → System → Power & battery.)
 ```
 ==============================================================================
 run     efficientnet_b0  (fresh start)
-model   efficientnet_b0  4.06 M params  ImageNet-pretrained
+model   efficientnet_b0  4.06 M params  weights timm/efficientnet_b0.ra_in1k
 data    train 37,992 / val 8,158 / test 8,155
 input   256px  mean (0.485, 0.456, 0.406)  std (0.229, 0.224, 0.225)
 recipe  AdamW lr 0.0001 wd 0.05  warmup 2 ep, cosine to 1e-06  40 ep x 1187 steps  batch 32  float16
@@ -385,6 +388,138 @@ seed and the name — a paper run is allowed to change those two:
 ```powershell
 .venv/Scripts/python.exe ml_pipeline/src/training/train.py --config ml_pipeline/configs/baselines/efficientnet_b0.yaml --set run_name=dev_test epochs=2
 ```
+
+---
+
+## Part H — Training on another, faster machine
+
+**Copying the whole folder is not enough, and mostly wasted.** Of its 6.5 GB,
+4.75 GB is `.venv`, which works only on this laptop: it points at
+`C:\Python314`. The new machine needs its own Python environment and, often, a
+different PyTorch build for its GPU. Everything else travels.
+
+| What | Size | On the new machine |
+|---|---|---|
+| Code, configs, splits, git history | under 10 MB | **move it** — H1 |
+| `data\raw\` (the images) | 1.7 GB | **move it**, as one archive — H2 |
+| `.venv\` | 4.75 GB | **never copy it** — rebuild it, H3 |
+| `checkpoints\` | grows per run | only to finish a run that started here |
+| Downloaded pretrained weights | 0.15 GB | only if the machine has no internet — H3 |
+
+**Decide where to train before the first paper run.** Runs from two machines are
+still comparable — same recipe, same images, and every result records its GPU —
+but one machine for every run in a table is cleanest. No paper run exists yet,
+so now is the time to choose.
+
+### H1. Get the code there
+
+**Best: through GitHub.** It also backs your work up: today the code and its
+history exist only on this laptop's disk.
+
+1. On [github.com](https://github.com), create a new **private** repository —
+   say `agriswin-moe` — with no README, licence or .gitignore.
+2. Give Claude its address, and Claude connects the laptop to it and pushes.
+   (By hand, in PowerShell in the project folder: `git remote add origin
+   <address>`, then `git push -u origin main`.)
+3. On the new machine: `git clone <address>`, then `cd agriswin-moe`.
+
+**Or copy the folder** — leaving out `.venv` and `checkpoints`.
+
+### H2. Move the images as one file
+
+57,000 small files copy slowly; one archive copies quickly. In PowerShell, in the
+project folder on this laptop:
+
+```powershell
+tar -cf agriswin-data.tar -C data raw
+```
+
+That writes `agriswin-data.tar` — 1.77 GB, about a minute, and git ignores it.
+Copy it into the project folder on the new machine (USB drive, Google Drive,
+`scp`), and unpack it there:
+
+```bash
+tar -xf agriswin-data.tar -C data
+```
+
+Then delete the `.tar` on both machines. Downloading the data afresh with
+`download.py` also works, but on Linux PlantDoc's filenames then come out
+unsanitised — different from this laptop's. Copying keeps every machine
+byte-identical.
+
+The images can also live outside the project, for example on Kaggle or Colab:
+set the environment variable `AGRISWIN_DATA_ROOT` to the folder that contains
+`raw/`.
+
+### H3. Build the Python environment there
+
+On **Linux**, in the project folder:
+
+```bash
+python3 -m venv .venv
+```
+
+```bash
+.venv/bin/pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+```
+
+```bash
+.venv/bin/pip install -r ml_pipeline/requirements.txt
+```
+
+On **Windows**, follow Setup in the README.
+
+- **The `cu128` part must suit that GPU** — check
+  [pytorch.org/get-started/locally](https://pytorch.org/get-started/locally/).
+  RTX 50-series cards need cu128 or newer, and very old cards (Kaggle's P100,
+  for one) may be missing from the newest builds. A wrong choice cannot slip
+  through: `check_env.py` in H4 runs a real calculation on the GPU, and fails
+  at once if the build does not support it.
+- **On Kaggle or Colab**, skip the PyTorch line and use the PyTorch already
+  installed, which matches their drivers. Run only the `requirements.txt` line.
+- **No internet on the new machine** (some university clusters)? Copy the folder
+  `C:\Users\AMRITA JENA\.cache\huggingface\hub` to `~/.cache/huggingface/hub`
+  there, or the first run cannot download its starting weights.
+
+### H4. Check it before training
+
+```bash
+.venv/bin/python ml_pipeline/src/data/check_env.py
+```
+
+```bash
+.venv/bin/python ml_pipeline/src/data/dataset.py
+```
+
+```bash
+git status
+```
+
+Expect what A2 and A4 show here: `Environment is ready.`, `OK: dataset and
+loaders work.` and a clean tree. Once training starts, its header must name the
+same starting weights as on this laptop — for EfficientNet-B0,
+`weights timm/efficientnet_b0.ra_in1k`.
+
+### H5. Train — the same commands, with three differences
+
+1. On Linux the Python is `.venv/bin/python`, not `.venv/Scripts/python.exe`.
+2. **Use more data workers** if the machine has more CPU cores, or a fast GPU
+   will sit waiting for images: add `--set num_workers=8` (roughly the number of
+   CPU cores minus two). Paper runs may change this; it does not change results.
+3. **Keep `batch_size` at 32.** A bigger GPU tempts you to raise it, but batch
+   size is part of the recipe: change it, and every run is redone with the new
+   value — and 32 is the most this laptop can hold. A faster GPU is faster at
+   batch 32 too. (`train.py` refuses `--set batch_size=...` on a paper run.)
+
+Kaggle and Colab sessions end after roughly 9–12 hours: split Swin-V2-T with
+`--stop-after` and `--resume`, and keep `checkpoints/` on storage that outlives
+the session.
+
+### H6. Bring the results back
+
+Commit `results/<run>.json` on the new machine and push it; on the laptop, run
+`git pull`. If later phases will run on the laptop, also copy back
+`checkpoints/<run>/best.pt` — the trained weights every later phase starts from.
 
 ---
 

@@ -9,7 +9,10 @@
 # then:  pip install -r ml_pipeline/requirements.txt
 
 # --- models & training ---
-timm>=1.0.30              # Swin-V2, FastViT, EfficientNet, MobileViT backbones
+timm==1.0.30              # Swin-V2, FastViT, EfficientNet, MobileViT backbones.
+                          # Pinned exactly: a newer timm can change model code and
+                          # which pretrained weights a model name downloads, so two
+                          # machines would train different models from one command.
 numpy>=2.0
 pillow>=10.0              # image loading + dHash in build_splits.py
 

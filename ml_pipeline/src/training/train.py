@@ -385,6 +385,10 @@ def main():
     mean, std = tuple(data_cfg["mean"]), tuple(data_cfg["std"])
     model.cuda()
     n_params = sum(p.numel() for p in model.parameters())
+    # the starting weights, by name: two machines with different timm versions
+    # could otherwise start the "same" model from different weights unnoticed
+    weights = ((model.backbone.pretrained_cfg.get("hf_hub_id") or "ImageNet-pretrained")
+               if cfg["pretrained"] else None)
 
     train_loader, val_loader, test_loader = build_loaders(
         batch_size=cfg["batch_size"], img_size=cfg["img_size"], num_workers=cfg["num_workers"],
@@ -417,7 +421,7 @@ def main():
     log("=" * 78)
     log(f"run     {run}  ({session})")
     log(f"model   {cfg['model']}  {n_params / 1e6:.2f} M params  "
-        f"{'ImageNet-pretrained' if cfg['pretrained'] else 'from scratch'}")
+        f"{'weights ' + weights if weights else 'from scratch'}")
     log(f"data    train {sizes['train']:,} / val {sizes['val']:,} / test {sizes['test']:,}{subset_note}")
     log(f"input   {cfg['img_size']}px  mean {fmt(mean)}  std {fmt(std)}")
     log(f"recipe  AdamW lr {cfg['lr']:g} wd {cfg['weight_decay']:g}  warmup {cfg['warmup_epochs']:g} ep, "
@@ -502,7 +506,7 @@ def main():
         "config": cfg,
         "environment": environment(),
         "data": {"sizes": sizes, "fingerprint": fingerprints, "mean": list(mean), "std": list(std)},
-        "model": {"params": n_params},
+        "model": {"params": n_params, "pretrained_weights": weights},
         "training": {"epochs_run": track["epoch"], "best_epoch": track["best_epoch"],
                      "train_time_s": track["train_time_s"], "peak_vram_gb": track["peak_vram_gb"],
                      "history": track["history"]},

@@ -1,0 +1,4 @@
+# Compare and store text files by content, not by line ending. Without this, a
+# folder copied from Windows to Linux shows the split CSVs as modified (Python's
+# csv module writes CRLF), and train.py then refuses every paper run there.
+* text=auto
