@@ -9,18 +9,27 @@ this one is just *what to type next*.
 
 This is the thing that looks broken but is not.
 
+Everything is inside the project folder. Paths below are relative to
+`C:\Users\AMRITA JENA\Plant Disease Detection\`.
+
 | Thing | Where it is | In git? | Size |
 |---|---|---|---|
-| The 54,305 PlantVillage images | `A:\agriswin-data\raw\plantvillage\raw\color\` | **No** | ~2 GB |
-| The 2,589 PlantDoc images | `A:\agriswin-data\raw\plantdoc\` | **No** | ~0.7 GB |
-| The *list* of which image is train/val/test | `data/splits/*.csv` | **Yes** | 6 MB |
-| All the code | `ml_pipeline/src/` | **Yes** | small |
+| The 54,305 PlantVillage images | `data\raw\plantvillage\raw\color\` | **No** | 811 MB |
+| The 2,589 PlantDoc images | `data\raw\plantdoc\train\`, `...\test\` | **No** | 962 MB |
+| The *list* of which image is train/val/test | `data\splits\*.csv` | **Yes** | 6 MB |
+| All the code | `ml_pipeline\src\` | **Yes** | small |
 | Trained models | nowhere yet | no | - |
 
-**Images are deliberately outside the repo.** GitHub rejects pushes over 2 GB,
-and a repo you cannot clone is worse than no repo. What gets committed instead
-is the *decision* about which image goes where. That is the part that must never
-change, because every model in the paper has to be scored on identical images.
+**In the folder, but not in git.** `.gitignore` excludes `data/raw/`, so the
+images sit next to the code where you can browse them, while git never stages,
+commits or pushes them — GitHub rejects pushes that size, and a repo nobody can
+clone is worse than no repo. What gets committed instead is the *decision* about
+which image goes where. That is the part that must never change, because every
+model in the paper has to be scored on identical images.
+
+The root is overridable (`ml_pipeline/configs/data_root.txt`, or
+`$AGRISWIN_DATA_ROOT`) for a small system drive or for Colab/Kaggle. With no
+override, it is `<repo>/data`.
 
 Look inside `data/splits/plantvillage_train.csv` and you will see rows like:
 
@@ -30,9 +39,9 @@ Apple___Apple_scab/00075aa8-...___FREC_Scab 3335.JPG,Apple___Apple_scab,0,Apple,
 
 That is a *pointer*: filename, class name, class number, crop, which MoE expert
 owns it, and which duplicate-group it belongs to. The code joins the pointer to
-`A:\agriswin-data\...` at load time. Move the images to another drive, or to
-Kaggle, and only `ml_pipeline/configs/data_root.txt` changes - the splits stay
-byte-for-byte identical.
+the data root at load time. Move the images to another drive, or to Kaggle, and
+only `ml_pipeline/configs/data_root.txt` changes - the splits stay byte-for-byte
+identical.
 
 Prove the data is present any time:
 

@@ -11,11 +11,11 @@ measurement.
 - [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md) — what to do next, in order, with commands.
 - [docs/ACTION_PLAN.md](docs/ACTION_PLAN.md) — scope, the paper's table design, and why.
 
-> **The image files are not in this repo, by design.** 2.7 GB of JPEGs cannot go
-> in git. They live under the data root (`ml_pipeline/configs/data_root.txt`,
-> currently `A:\agriswin-data`). What *is* committed is `data/splits/*.csv`: the
-> list of which image belongs to train, val or test. Run
-> `python ml_pipeline/src/data/dataset.py` to confirm the two are connected.
+> **The images live in `data/raw/`, but are not committed.** They sit inside the
+> project next to the code; `.gitignore` excludes `data/raw/`, so the 1.7 GB of
+> JPEGs is never staged, committed or pushed. What *is* committed is
+> `data/splits/*.csv`: the list of which image belongs to train, val or test.
+> Run `python ml_pipeline/src/data/dataset.py` to confirm the two are connected.
 
 ---
 
@@ -61,14 +61,17 @@ colour, greyscale *and* segmented copies of every image, so a plain clone costs
 enough to exceed `MAX_PATH`, which makes git abort the whole checkout, so the
 tree is written manually with sanitised names (109 of 2,581 files are renamed).
 
-Datasets are large, so they live outside the repo. Point them anywhere:
+This writes to `data/raw/` inside the project, which `.gitignore` excludes. If
+the system drive is short on space, or the data should be shared between
+checkouts, point it elsewhere:
 
 ```bash
-python ml_pipeline/src/data/download.py --dataset all --data-root A:/agriswin-data
+python ml_pipeline/src/data/download.py --dataset all --data-root D:/agriswin-data
 ```
 
-The choice is saved to `ml_pipeline/configs/data_root.txt`, and split CSVs store
-paths *relative to the image root*, so the same frozen split works here, on
+The choice is saved to `ml_pipeline/configs/data_root.txt` (itself gitignored);
+delete that file to go back to the in-project default. Split CSVs store paths
+*relative to the image root* either way, so the same frozen split works here, on
 Colab and on Kaggle unchanged.
 
 `build_splits.py` writes frozen 70/15/15 splits to `data/splits/*.csv`

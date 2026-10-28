@@ -1,12 +1,14 @@
 """
 Where the data lives.
 
-The image sets are far too large for the repo (and, on this machine, for the C:
-drive), so the data root is configurable and resolved in this order:
+By default the datasets live inside the repo at <repo>/data/raw, which .gitignore
+excludes, so the images sit next to the code without ever being committed. The
+root stays configurable for the cases where that is not possible -- a small system
+drive, a shared dataset cache, or Colab/Kaggle -- and is resolved in this order:
 
     1. $AGRISWIN_DATA_ROOT
     2. ml_pipeline/configs/data_root.txt   (git-ignored, written by set_data_root)
-    3. <repo>/data
+    3. <repo>/data                          (the default)
 
 Split CSVs always stay in the repo and store paths *relative to the image root*,
 never absolute. That is what lets the same frozen split be used here, on Colab

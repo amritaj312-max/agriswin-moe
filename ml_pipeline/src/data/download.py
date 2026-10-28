@@ -15,7 +15,7 @@ directories -- they are image data, treated as untrusted.
 
 Usage:
     python ml_pipeline/src/data/download.py --dataset all
-    python ml_pipeline/src/data/download.py --dataset plantvillage --data-root A:/agriswin-data
+    python ml_pipeline/src/data/download.py --dataset plantvillage --data-root D:/agriswin-data
 """
 
 import argparse
@@ -259,7 +259,7 @@ def main():
         print(f"\nERROR: not enough free space. Need ~{needed * 1.3:.1f} GB "
               f"(datasets plus git overhead), have {free:.1f} GB.")
         print("Re-run with --data-root pointing at a drive with more room, e.g.:")
-        print("  python ml_pipeline/src/data/download.py --data-root A:/agriswin-data")
+        print("  python ml_pipeline/src/data/download.py --data-root D:/agriswin-data")
         sys.exit(1)
 
     ok = True
