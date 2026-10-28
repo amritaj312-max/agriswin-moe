@@ -1,0 +1,34 @@
+# AgriSwin-MoE training environment
+#
+# torch/torchvision are NOT listed here with versions because they must come
+# from the CUDA index, not PyPI. Install them first:
+#
+#   pip install --index-url https://download.pytorch.org/whl/cu126 \
+#               torch==2.14.1 torchvision
+#
+# then:  pip install -r ml_pipeline/requirements.txt
+
+# --- models & training ---
+timm>=1.0.30              # Swin-V2, FastViT, EfficientNet, MobileViT backbones
+numpy>=2.0
+pillow>=10.0              # image loading + dHash in build_splits.py
+
+# --- data & augmentation ---
+albumentations>=1.4
+opencv-python-headless>=4.10
+
+# --- metrics & calibration ---
+scikit-learn>=1.5         # macro-F1, confusion matrix, stratification checks
+scipy>=1.14
+
+# --- experiment tracking & plots ---
+matplotlib>=3.9
+seaborn>=0.13
+pandas>=2.2
+tqdm>=4.66
+tensorboard>=2.17
+
+# --- export (Phase 5) ---
+onnx>=1.17
+onnxruntime>=1.19
+onnxsim>=0.4
