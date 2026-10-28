@@ -4,7 +4,8 @@ A Hybrid Vision Transformer with Shape-Texture Decoupled Attention, Sparse
 Mixture-of-Experts, and On-Device SLM Advisory for Uncertainty-Aware Offline
 Plant Disease Diagnosis.
 
-**Status:** Phase 1 (foundation). Data pipeline in place; no models trained yet.
+**Status:** Phase 1 complete. Environment verified, datasets downloaded, splits
+frozen. No models trained yet.
 
 See [docs/ACTION_PLAN.md](docs/ACTION_PLAN.md) for scope, the paper's table
 design, and the phase-by-phase plan.
@@ -23,10 +24,17 @@ pip install --index-url https://download.pytorch.org/whl/cu126 torch==2.14.1 tor
 pip install -r ml_pipeline/requirements.txt
 ```
 
-Verify CUDA:
+Verify CUDA, packages and all four backbones:
 
 ```bash
 python ml_pipeline/src/data/check_env.py
+```
+
+**Before training, set this** (see `ml_pipeline/configs/hardware.md` for why it
+is not optional on a 6 GB card):
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 ```
 
 ## Data
@@ -36,11 +44,28 @@ python ml_pipeline/src/data/download.py --dataset all
 python ml_pipeline/src/data/build_splits.py
 ```
 
-`download.py` clones PlantVillage (~2 GB, 54k images, 38 classes) and PlantDoc
-(~700 MB, field images, used **only** for the cross-dataset study) into
-`data/raw/`.
+`download.py` fetches PlantVillage (54,305 images, 38 classes) and PlantDoc
+(2,589 field images, used **only** for the cross-dataset study).
 
-`build_splits.py` writes frozen 70/15/15 splits to `data/splits/*.csv`. These
+Two Windows-specific problems are handled automatically. PlantVillage ships
+colour, greyscale *and* segmented copies of every image, so a plain clone costs
+~6 GB for the 811 MB that is wanted; a blobless sparse checkout fetches only
+`raw/color`. PlantDoc has web-scraped filenames containing `?` and names long
+enough to exceed `MAX_PATH`, which makes git abort the whole checkout, so the
+tree is written manually with sanitised names (109 of 2,581 files are renamed).
+
+Datasets are large, so they live outside the repo. Point them anywhere:
+
+```bash
+python ml_pipeline/src/data/download.py --dataset all --data-root A:/agriswin-data
+```
+
+The choice is saved to `ml_pipeline/configs/data_root.txt`, and split CSVs store
+paths *relative to the image root*, so the same frozen split works here, on
+Colab and on Kaggle unchanged.
+
+`build_splits.py` writes frozen 70/15/15 splits to `data/splits/*.csv`
+(37,992 / 8,158 / 8,155 images, no empty classes, zero group leakage). These
 CSVs are committed: every baseline, ablation and the student model must be
 evaluated on exactly the same images, or the comparison table is meaningless.
 
@@ -50,11 +75,24 @@ inflates accuracy by several points. Duplicates are grouped by a 64-bit dHash
 (identical-hash pass, then a 16-bit-band LSH pass merging anything within 6
 bits) and each group stays inside one split.
 
-To measure how much that matters, build both and compare:
+On this dataset it groups 1,237 near-duplicates (2.3%). To measure how much
+that matters, build both and compare — the gap is worth a line in the paper:
 
 ```bash
 python ml_pipeline/src/data/build_splits.py --no-dedup
 ```
+
+Note `--no-dedup` and `--limit` overwrite the same CSVs, so re-run without
+flags afterwards to restore the real splits.
+
+## Hardware
+
+Images are natively 256x256, and 256 is also the native resolution for
+Swin-V2-T, MobileViT-S and FastViT-SA12, so **everything trains at 256** — only
+EfficientNet-B0 is natively 224. Measured on the RTX 3050 (6 GB): 288 ms/step at
+batch 16, **11 min/epoch**, ~7.5 h for a 40-epoch teacher run. Throughput is flat
+from batch 16 to 48, so the GPU is compute-bound; use batch 32 and keep the
+headroom. Full numbers in `ml_pipeline/configs/hardware.md`.
 
 ## Layout
 

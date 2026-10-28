@@ -33,11 +33,10 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import paths  # noqa: E402
 from classes import CLASS_TO_IDX, PLANTVILLAGE_CLASSES, crop_of, expert_of  # noqa: E402
 
-REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-IMAGE_ROOT = os.path.join(REPO_ROOT, "data", "raw", "plantvillage", "raw", "color")
-SPLIT_DIR = os.path.join(REPO_ROOT, "data", "splits")
+SPLIT_DIR = paths.SPLIT_DIR
 
 SEED = 42
 RATIOS = {"train": 0.70, "val": 0.15, "test": 0.15}
@@ -54,7 +53,7 @@ def dhash(path, size=8):
     try:
         with Image.open(path) as im:
             im = im.convert("L").resize((size + 1, size), Image.Resampling.LANCZOS)
-            px = list(im.getdata())
+            px = im.tobytes()          # mode "L": one byte per pixel, row-major
     except Exception:
         return None
 
@@ -138,11 +137,11 @@ def assign_splits(groups_by_class, rng):
         target = {s: total * r for s, r in RATIOS.items()}
         current = {s: 0 for s in RATIOS}
 
-        for group_id, paths in group_items:
+        for group_id, group_paths in group_items:
             deficit = {s: (target[s] - current[s]) / max(target[s], 1) for s in RATIOS}
             split = max(deficit, key=deficit.get)
             assignment[(class_name, group_id)] = split
-            current[split] += len(paths)
+            current[split] += len(group_paths)
 
     return assignment
 
@@ -150,14 +149,15 @@ def assign_splits(groups_by_class, rng):
 # --- main -------------------------------------------------------------------
 
 def scan_images(limit=None):
-    if not os.path.isdir(IMAGE_ROOT):
-        print(f"ERROR: image root not found: {IMAGE_ROOT}")
+    image_root = paths.image_root("plantvillage")
+    if not os.path.isdir(image_root):
+        print(f"ERROR: image root not found: {image_root}")
         print("Run: python ml_pipeline/src/data/download.py --dataset plantvillage")
         sys.exit(1)
 
     records = []
-    found_classes = sorted(d for d in os.listdir(IMAGE_ROOT)
-                           if os.path.isdir(os.path.join(IMAGE_ROOT, d)))
+    found_classes = sorted(d for d in os.listdir(image_root)
+                           if os.path.isdir(os.path.join(image_root, d)))
 
     unknown = [c for c in found_classes if c not in CLASS_TO_IDX]
     missing = [c for c in PLANTVILLAGE_CLASSES if c not in found_classes]
@@ -169,7 +169,7 @@ def scan_images(limit=None):
     for class_name in found_classes:
         if class_name not in CLASS_TO_IDX:
             continue
-        class_dir = os.path.join(IMAGE_ROOT, class_name)
+        class_dir = os.path.join(image_root, class_name)
         files = sorted(f for f in os.listdir(class_dir) if f.lower().endswith(IMAGE_EXTS))
         if limit:
             files = files[:max(1, limit // len(found_classes))]
@@ -222,13 +222,17 @@ def main():
     print("Assigning splits (stratified, group-aware)...")
     assignment = assign_splits(groups_by_class, rng)
 
+    # paths are stored relative to the image root, not absolute, so the same
+    # frozen split works here, on Colab and on Kaggle without rewriting
+    image_root = paths.image_root("plantvillage")
+
     rows = {s: [] for s in RATIOS}
     for class_name, groups in groups_by_class.items():
-        for gid, paths in groups.items():
+        for gid, group_paths in groups.items():
             split = assignment[(class_name, gid)]
-            for path in paths:
+            for path in group_paths:
                 rows[split].append({
-                    "path": os.path.relpath(path, REPO_ROOT).replace("\\", "/"),
+                    "path": os.path.relpath(path, image_root).replace("\\", "/"),
                     "class_name": class_name,
                     "class_idx": CLASS_TO_IDX[class_name],
                     "crop": crop_of(class_name),

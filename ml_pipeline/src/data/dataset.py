@@ -7,7 +7,7 @@ comparison table in the paper is to mean anything, nothing may bypass this.
 
 Usage:
     from dataset import build_loaders
-    train_loader, val_loader, test_loader = build_loaders(batch_size=16, img_size=224)
+    train_loader, val_loader, test_loader = build_loaders(batch_size=32, img_size=256)
 """
 
 import csv
@@ -20,10 +20,10 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import paths  # noqa: E402
 from classes import NUM_CLASSES  # noqa: E402
 
-REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-SPLIT_DIR = os.path.join(REPO_ROOT, "data", "splits")
+SPLIT_DIR = paths.SPLIT_DIR
 
 # ImageNet statistics -- all four backbones are ImageNet-pretrained
 MEAN = (0.485, 0.456, 0.406)
@@ -51,14 +51,16 @@ class PlantVillageSplit(Dataset):
         self.split = split
         self.transform = transform
         self.return_expert = return_expert
+        # CSV paths are relative to the image root, so the data can live on any
+        # drive (or on Colab/Kaggle) without touching the committed splits
+        self.image_root = paths.image_root(dataset)
 
     def __len__(self):
         return len(self.rows)
 
     def __getitem__(self, i):
         row = self.rows[i]
-        path = os.path.join(REPO_ROOT, row["path"])
-        image = Image.open(path).convert("RGB")
+        image = Image.open(os.path.join(self.image_root, row["path"])).convert("RGB")
 
         if self.transform is not None:
             image = self.transform(image)
@@ -77,7 +79,7 @@ class PlantVillageSplit(Dataset):
         return counts
 
 
-def train_transform(img_size=224):
+def train_transform(img_size=256):
     """Augmentation for training.
 
     Deliberately strong: PlantVillage is lab-captured with uniform backgrounds,
@@ -98,7 +100,7 @@ def train_transform(img_size=224):
     ])
 
 
-def eval_transform(img_size=224):
+def eval_transform(img_size=256):
     """Deterministic transform for val/test. Resize short side then centre-crop,
     the standard ImageNet evaluation protocol."""
     return transforms.Compose([
@@ -109,11 +111,13 @@ def eval_transform(img_size=224):
     ])
 
 
-def build_loaders(batch_size=16, img_size=224, num_workers=4, return_expert=False,
+def build_loaders(batch_size=32, img_size=256, num_workers=4, return_expert=False,
                   pin_memory=True):
     """Build train/val/test loaders with the standard transforms.
 
-    Defaults target a 6 GB card: batch 16 at 224px with AMP fits Swin-V2-T.
+    Defaults target a 6 GB card: measured max batch for Swin-V2-T at 256px with
+    AMP is 16 (see probe_batch.py). 256 is the native resolution for Swin-V2-T,
+    MobileViT-S and FastViT-SA12; only EfficientNet-B0 is natively 224.
     """
     train_ds = PlantVillageSplit("train", train_transform(img_size), return_expert)
     val_ds = PlantVillageSplit("val", eval_transform(img_size), return_expert)
@@ -150,6 +154,6 @@ if __name__ == "__main__":
     print(f"  images {tuple(images.shape)}  {images.dtype}")
     print(f"  labels {labels.tolist()}")
     print(f"  value range [{images.min():.2f}, {images.max():.2f}] (normalised)")
-    assert images.shape[1:] == (3, 224, 224)
+    assert images.shape[1:] == (3, 256, 256)
     assert labels.max() < NUM_CLASSES
     print("\nOK: dataset and loaders work.")

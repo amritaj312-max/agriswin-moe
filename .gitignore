@@ -52,3 +52,4 @@ research_papers/*.pdf
 
 # ---- Claude Code plugins (not part of this project) ----
 plugins/
+ml_pipeline/configs/data_root.txt
