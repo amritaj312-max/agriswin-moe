@@ -5,10 +5,17 @@ Mixture-of-Experts, and On-Device SLM Advisory for Uncertainty-Aware Offline
 Plant Disease Diagnosis.
 
 **Status:** Phase 1 complete. Environment verified, datasets downloaded, splits
-frozen. No models trained yet.
+frozen. **No models trained yet** — every number in the docs is a target, not a
+measurement.
 
-See [docs/ACTION_PLAN.md](docs/ACTION_PLAN.md) for scope, the paper's table
-design, and the phase-by-phase plan.
+- [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md) — what to do next, in order, with commands.
+- [docs/ACTION_PLAN.md](docs/ACTION_PLAN.md) — scope, the paper's table design, and why.
+
+> **The image files are not in this repo, by design.** 2.7 GB of JPEGs cannot go
+> in git. They live under the data root (`ml_pipeline/configs/data_root.txt`,
+> currently `A:\agriswin-data`). What *is* committed is `data/splits/*.csv`: the
+> list of which image belongs to train, val or test. Run
+> `python ml_pipeline/src/data/dataset.py` to confirm the two are connected.
 
 ---
 
