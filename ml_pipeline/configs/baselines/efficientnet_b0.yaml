@@ -1,0 +1,4 @@
+# Baseline 1 (Table II): the CNN people actually deploy.
+# Shared hyperparameters: ../recipe.yaml
+run_name: efficientnet_b0
+model: efficientnet_b0

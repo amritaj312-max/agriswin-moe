@@ -1,0 +1,4 @@
+# Baseline 2 (Table II): the mobile ViT the distilled student has to beat.
+# Shared hyperparameters: ../recipe.yaml
+run_name: mobilevit_s
+model: mobilevit_s

@@ -12,6 +12,7 @@ Usage:
 
 import csv
 import os
+import random
 import sys
 
 import torch
@@ -25,7 +26,9 @@ from classes import NUM_CLASSES  # noqa: E402
 
 SPLIT_DIR = paths.SPLIT_DIR
 
-# ImageNet statistics -- all four backbones are ImageNet-pretrained
+# ImageNet statistics, the default. Training passes each model's own pretrained
+# statistics instead: MobileViT-S was pretrained on raw [0, 1] pixels, and feeding
+# it ImageNet-normalised inputs would quietly handicap it as a baseline.
 MEAN = (0.485, 0.456, 0.406)
 STD = (0.229, 0.224, 0.225)
 
@@ -79,13 +82,13 @@ class PlantVillageSplit(Dataset):
         return counts
 
 
-def train_transform(img_size=256):
+def train_transform(img_size=256, mean=MEAN, std=STD):
     """Augmentation for training.
 
     Deliberately strong: PlantVillage is lab-captured with uniform backgrounds,
     so without heavy augmentation the model latches onto background cues and
-    collapses on field images (the PlantDoc failure mode). Mixup/CutMix are
-    applied in the training loop, not here, because they need the labels.
+    collapses on field images (the PlantDoc failure mode). Mixup/CutMix are not
+    used; configs/recipe.yaml says why.
     """
     return transforms.Compose([
         transforms.RandomResizedCrop(img_size, scale=(0.6, 1.0)),
@@ -95,33 +98,47 @@ def train_transform(img_size=256):
         transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.05),
         transforms.RandAugment(num_ops=2, magnitude=9),
         transforms.ToTensor(),
-        transforms.Normalize(MEAN, STD),
+        transforms.Normalize(mean, std),
         transforms.RandomErasing(p=0.25, scale=(0.02, 0.15)),
     ])
 
 
-def eval_transform(img_size=256):
+def eval_transform(img_size=256, mean=MEAN, std=STD):
     """Deterministic transform for val/test. Resize short side then centre-crop,
     the standard ImageNet evaluation protocol."""
     return transforms.Compose([
         transforms.Resize(int(img_size * 1.14)),
         transforms.CenterCrop(img_size),
         transforms.ToTensor(),
-        transforms.Normalize(MEAN, STD),
+        transforms.Normalize(mean, std),
     ])
 
 
 def build_loaders(batch_size=32, img_size=256, num_workers=4, return_expert=False,
-                  pin_memory=True):
+                  pin_memory=True, mean=MEAN, std=STD, subset=None):
     """Build train/val/test loaders with the standard transforms.
 
-    Defaults target a 6 GB card: measured max batch for Swin-V2-T at 256px with
-    AMP is 16 (see probe_batch.py). 256 is the native resolution for Swin-V2-T,
-    MobileViT-S and FastViT-SA12; only EfficientNet-B0 is natively 224.
+    `mean`/`std` should be the model's pretrained normalisation
+    (timm.data.resolve_model_data_config); they default to ImageNet.
+
+    `subset` keeps a fixed random fraction of every split. It exists for
+    debugging only -- a subset result is not comparable to anything.
+
+    Batch 32 at 256px fits every backbone on the 6 GB card, provided
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True (see configs/hardware.md).
+    256 is the native resolution for Swin-V2-T, MobileViT-S and FastViT-SA12;
+    only EfficientNet-B0 is natively 224.
     """
-    train_ds = PlantVillageSplit("train", train_transform(img_size), return_expert)
-    val_ds = PlantVillageSplit("val", eval_transform(img_size), return_expert)
-    test_ds = PlantVillageSplit("test", eval_transform(img_size), return_expert)
+    train_ds = PlantVillageSplit("train", train_transform(img_size, mean, std), return_expert)
+    val_ds = PlantVillageSplit("val", eval_transform(img_size, mean, std), return_expert)
+    test_ds = PlantVillageSplit("test", eval_transform(img_size, mean, std), return_expert)
+
+    if subset is not None:
+        if not 0 < subset <= 1:
+            raise ValueError(f"subset must be in (0, 1], got {subset}")
+        rng = random.Random(0)
+        for ds in (train_ds, val_ds, test_ds):
+            ds.rows = rng.sample(ds.rows, max(1, round(len(ds.rows) * subset)))
 
     common = dict(batch_size=batch_size, num_workers=num_workers,
                   pin_memory=pin_memory, persistent_workers=num_workers > 0)

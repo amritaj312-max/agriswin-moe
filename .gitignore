@@ -53,3 +53,6 @@ research_papers/*.pdf
 # ---- Claude Code plugins (not part of this project) ----
 plugins/
 ml_pipeline/configs/data_root.txt
+
+# ---- Dev/smoke-test runs (train.py --set run_name=dev_...) ----
+results/dev_*

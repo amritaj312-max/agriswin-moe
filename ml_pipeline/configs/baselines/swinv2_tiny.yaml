@@ -1,0 +1,6 @@
+# Baseline 3 (Table II) and ablation row 1 (Table III): the teacher backbone
+# with no ST-DAM and no MoE. Also the pipeline's gate -- expect ~99% on
+# PlantVillage; far below means a bug, 100.0% means leakage.
+# Shared hyperparameters: ../recipe.yaml
+run_name: swinv2_tiny
+model: swinv2_tiny_window8_256

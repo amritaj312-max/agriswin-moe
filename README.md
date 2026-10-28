@@ -95,6 +95,42 @@ python ml_pipeline/src/data/build_splits.py --no-dedup
 Note `--no-dedup` and `--limit` overwrite the same CSVs, so re-run without
 flags afterwards to restore the real splits.
 
+## Training
+
+One loop trains every model in the paper, so no two rows of a table can have
+been trained differently:
+
+```bash
+python ml_pipeline/src/training/train.py --config ml_pipeline/configs/baselines/efficientnet_b0.yaml
+```
+
+Shared hyperparameters live in `ml_pipeline/configs/recipe.yaml`, which also
+records where and why it departs from the original design doc; a run config only
+names the model. Each run writes `results/<run>.json` — config, environment, git
+commit, per-epoch history, val and test metrics, and a fingerprint of the exact
+images in each split — and keeps weights under `checkpoints/<run>/`
+(git-ignored). The test split is scored once, at the end, on the best-val
+weights. **Commit before a real run**: the JSON records whether the tree was
+dirty.
+
+Long runs survive interruption, and can be split across sessions:
+
+```bash
+python ml_pipeline/src/training/train.py --config <same> --stop-after 20   # pause after epoch 20
+python ml_pipeline/src/training/train.py --config <same> --resume          # carry on
+```
+
+Resuming refuses if the recipe changed in between, since the result would mix two
+recipes. For anything that is not a paper result, override values and use a
+`dev_` run name, which git ignores:
+
+```bash
+python ml_pipeline/src/training/train.py --config <same> --set epochs=2 run_name=dev_try
+```
+
+Every metric is checked against scikit-learn by
+`python ml_pipeline/src/evaluation/metrics.py`.
+
 ## Hardware
 
 Images are natively 256x256, and 256 is also the native resolution for
@@ -109,16 +145,17 @@ headroom. Full numbers in `ml_pipeline/configs/hardware.md`.
 ```
 ml_pipeline/
   src/
-    data/        classes.py, download.py, build_splits.py, check_env.py
-    models/      backbones, ST-DAM, MoE head  (Phase 3)
-    training/    trainer, losses, distillation  (Phase 3+)
-    evaluation/  metrics, calibration, Grad-CAM  (Phase 4)
+    data/        classes.py, download.py, build_splits.py, dataset.py, check_env.py
+    models/      classifier.py (backbone + MC-dropout head); ST-DAM, MoE  (Phase 3)
+    training/    train.py; distillation  (Phase 5)
+    evaluation/  metrics.py; calibration plots, Grad-CAM  (Phase 4)
     export/      ONNX / TFLite  (Phase 5)
-  configs/       per-experiment YAML
+  configs/       recipe.yaml (shared), baselines/*.yaml (one per run), hardware.md
 data/
   raw/           downloaded datasets (git-ignored)
   splits/        frozen split CSVs (committed)
-results/         metrics JSON per run (committed)
+checkpoints/     weights and logs per run (git-ignored)
+results/         metrics JSON per run (committed; dev_* ignored)
 paper/           LaTeX source
 docs/            design docs + action plan
 ```

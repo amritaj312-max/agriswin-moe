@@ -1,0 +1,44 @@
+# The training recipe shared by every run in the paper: baselines, ablations,
+# teacher. Change it here, never per run -- a table whose rows were trained
+# differently compares recipes, not models. Each run's results JSON records the
+# fully resolved config, so nothing set here is invisible later.
+#
+# Deliberate departures from docs/project_breakdown_v3_final.md. Most exist
+# because the paper measures calibration (Novelty 3) and later distils the
+# teacher (Phase 5):
+#
+#   label_smoothing 0.0, not 0.1, for three reasons specific to this paper:
+#     - With 38 classes it pulls every confident prediction toward ~0.90.
+#       Muller et al. (NeurIPS 2019) found that improves calibration where
+#       unsmoothed models are overconfident, but PlantVillage sits near 99%
+#       accuracy, the opposite regime: ~9 points of built-in underconfidence
+#       that would swamp the ECE differences the paper reports.
+#     - It degrades selective classification, i.e. the risk-coverage curve
+#       (Xia et al., ICLR 2025).
+#     - Smoothed teachers distil worse (Muller et al., 2019): Phase 5.
+#   No Mixup/CutMix. Both change calibration, and CutMix can paste over the very
+#     lesion that defines the class. dataset.train_transform already augments
+#     heavily.
+#   Plain cosine with linear warmup, not warm restarts: each restart spikes the
+#     learning rate, which fights early stopping on val macro-F1.
+#   One phase, not head-only-then-full. The two-phase scheme protects the
+#     backbone from randomly initialised ST-DAM/MoE modules; revisit it in
+#     Phase 3, and if adopted, retrain vanilla Swin-V2-T with it -- it is the
+#     ablation control.
+
+pretrained: true
+img_size: 256              # native for the data and for 3 of the 4 backbones
+batch_size: 32             # fits every backbone with expandable_segments (hardware.md)
+epochs: 40                 # a ceiling; early stopping usually ends a run sooner
+lr: 1.0e-4                 # AdamW peak, the same for every model
+min_lr: 1.0e-6
+warmup_epochs: 2.0
+weight_decay: 0.05         # not applied to biases, norm/scale params or position bias
+clip_grad: 5.0             # global gradient-norm clip; 0 disables
+label_smoothing: 0.0
+drop_rate: 0.2             # the MC-dropout layer, just before the classifier
+drop_path_rate: 0.1
+amp_dtype: float16         # bfloat16 if a run reports non-finite losses
+early_stop_patience: 10    # epochs without a val macro-F1 improvement; 0 disables
+seed: 42
+num_workers: 4             # the only setting allowed to change on --resume
