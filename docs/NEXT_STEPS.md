@@ -83,18 +83,19 @@ You should see `train 37992 images`, `val 8158`, `test 8155`, and at the end
 
 ### A3. Make the laptop safe for multi-hour runs
 
-A run takes 2–8 hours, and Windows will happily interrupt it. Do these once:
+A run takes 2–8 hours. `train.py` stops Windows going to sleep by itself while
+it runs — its header says `power   Windows will not sleep while this runs` —
+and the screen turning off is fine. The rest is up to you. Do these once:
 
 1. **Plug in the charger** and leave it in. On battery the GPU slows right down.
-2. **No sleep while plugged in:** Settings → System → Power & battery →
-   *Screen, sleep, & hibernate timeouts* → "When plugged in, put my device to
-   sleep after" → **Never**. The *screen* turning off is fine.
-3. **Power mode:** Settings → System → Power & battery → *Power mode* →
+2. **Power mode:** Settings → System → Power & battery → *Power mode* →
    **Best performance**.
-4. **Pause Windows Update during long runs:** Settings → Windows Update →
-   **Pause updates** for 1 week. An overnight update restart kills a run.
-5. **Keep the lid open**, on a hard flat surface — not a bed or a lap. The GPU
-   measured 75–78 °C under load; blocked vents push that up and it slows down.
+3. **Pause Windows Update during long runs:** Settings → Windows Update →
+   **Pause updates** for 1 week. An overnight update restart kills a run, and
+   no program can prevent it.
+4. **Keep the lid open**, on a hard flat surface — not a bed or a lap. Closing
+   the lid still puts the laptop to sleep, and blocked vents make the GPU run
+   hotter than the 75–78 °C it measured under load, which slows it down.
 
 If a run gets interrupted anyway, see Part G: you lose one epoch at most.
 
@@ -105,9 +106,9 @@ git status
 ```
 
 You should see **`nothing to commit, working tree clean`**. Every result records
-the exact code version that produced it; if the tree is not clean, the result is
-marked "uncommitted code" and cannot be traced. If you see changes you did not
-make, ask Claude before training.
+the exact code version that produced it, so `train.py` refuses to start a real
+run while the code, configs or splits have uncommitted changes (Part G shows the
+message). If you see changes you did not make, ask Claude before training.
 
 ---
 
@@ -125,7 +126,8 @@ The examples below are real output from the 2-epoch test run.
 
 **A header.** Check two things in it: the `data` line reads **37,992 / 8,158 /
 8,155**, and there is **no `SUBSET` note**. If either is wrong, press Ctrl+C and
-tell Claude.
+tell Claude. (If the `power` line ever says `WARNING`, set sleep to *Never*
+yourself: Settings → System → Power & battery.)
 
 ```
 ==============================================================================
@@ -134,6 +136,7 @@ model   efficientnet_b0  4.06 M params  ImageNet-pretrained
 data    train 37,992 / val 8,158 / test 8,155
 input   256px  mean (0.485, 0.456, 0.406)  std (0.229, 0.224, 0.225)
 recipe  AdamW lr 0.0001 wd 0.05  warmup 2 ep, cosine to 1e-06  40 ep x 1187 steps  batch 32  float16
+power   Windows will not sleep while this runs (closing the lid still will)
 ==============================================================================
   data workers took 23s to start
 ```
@@ -348,6 +351,7 @@ Claude, and ends the way Part E does: a summary table and a commit.
 | You see | It means | Do this |
 |---|---|---|
 | The laptop slept or restarted, or the window closed | the run stopped part-way | run the **same command with `--resume` added** at the end. It continues from the last finished epoch |
+| `is not named dev_..., so it has to be able to stand as a paper result` | the code, configs or splits have uncommitted changes, or `--set` changed the recipe | commit first (`git add`, then `git commit`), or drop the `--set`. To experiment, name the run `dev_...` |
 | `already holds a run: pass --resume to continue it` | that run already exists | add `--resume` to continue it — or, to start from zero, delete the folder `checkpoints\<run name>` first |
 | `config differs from the checkpoint in [...]` | the recipe or a config changed since the run began | undo the change. Never edit `recipe.yaml` part-way through a set of runs |
 | `already finished` | that run is complete | nothing to do; its result is in `results\` |
@@ -368,6 +372,13 @@ lost. To continue later, add `--resume`:
 **To split a long run on purpose** — say 20 epochs tonight, the rest tomorrow —
 add `--stop-after 20`, and later run the same command with `--resume` instead.
 
+**To repeat a run with another random seed** (for error bars), override only the
+seed and the name — a paper run is allowed to change those two:
+
+```powershell
+.venv/Scripts/python.exe ml_pipeline/src/training/train.py --config ml_pipeline/configs/baselines/efficientnet_b0.yaml --set seed=1 run_name=efficientnet_b0_seed1
+```
+
 **To try something that is not a paper result,** give it a name starting with
 `dev_` and override what you like. Git ignores these results:
 
@@ -379,16 +390,24 @@ add `--stop-after 20`, and later run the same command with `--resume` instead.
 
 ## Five rules that keep the results publishable
 
+The code now enforces or checks four of them; only rule 3 rests on you alone.
+
 1. **Never edit `ml_pipeline/configs/recipe.yaml` between runs that share a
-   table.** If it has to change, every affected run is redone. Ask Claude first.
-2. **Commit before every real run** — `git status` clean. Results record the code
-   version.
+   table.** If it has to change, every affected run is redone — ask Claude
+   first. *Checked:* `summarize_results.py` warns when runs used different
+   recipes.
+2. **Commit before every real run.** Results record the code version.
+   *Enforced:* `train.py` refuses a real run with uncommitted code, configs or
+   splits.
 3. **Never use test numbers to choose anything** — not the number of epochs,
    not a setting. The loop scores the test set once, at the end, by itself;
    leave it that way.
 4. **Never edit `data/splits/*.csv`.** They define what "the test set" is.
-   `summarize_results.py` checks that every run used the same images.
-5. **Name experiments `dev_...`.** Only real runs belong in `results/` and in git.
+   *Enforced and checked:* an edited split counts as an uncommitted change, and
+   `summarize_results.py` confirms every run used the same images.
+5. **Name experiments `dev_...`.** Only real runs belong in `results/` and in
+   git. *Enforced:* a run that changes the recipe with `--set`, or trains on a
+   subset, must be named `dev_...`.
 
 ---
 

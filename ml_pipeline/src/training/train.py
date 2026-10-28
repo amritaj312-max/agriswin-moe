@@ -66,6 +66,9 @@ RESULTS_DIR = os.path.join(paths.REPO_ROOT, "results")
 
 RUN_KEYS = {"run_name", "model", "subset"}   # per-run keys the recipe does not hold
 RESUMABLE_KEYS = {"num_workers"}             # may differ between sessions of one run
+# what --set may change on a paper run; anything else departs from the recipe
+# every row of a table has to share
+PAPER_OVERRIDES = {"run_name", "seed", "num_workers"}
 AMP_DTYPES = {"float16": torch.float16, "bfloat16": torch.bfloat16}
 LOG_EVERY = 100                              # steps between progress lines
 CSV_FIELDS = ["epoch", "lr", "train_loss", "train_acc", "val_nll", "val_acc",
@@ -235,15 +238,57 @@ def fingerprint(dataset):
     return hashlib.sha256("\n".join(rows).encode("utf-8")).hexdigest()[:16]
 
 
-def environment():
-    def git(*args):
-        try:
-            out = subprocess.run(["git", *args], cwd=paths.REPO_ROOT, capture_output=True,
-                                 text=True, timeout=10)
-            return out.stdout.strip() if out.returncode == 0 else None
-        except (OSError, subprocess.SubprocessError):
-            return None
+def git(*args):
+    """Output of a git command run in the repo, or None if git is unavailable."""
+    try:
+        out = subprocess.run(["git", *args], cwd=paths.REPO_ROOT, capture_output=True,
+                             text=True, timeout=10)
+        return out.stdout.strip() if out.returncode == 0 else None
+    except (OSError, subprocess.SubprocessError):
+        return None
 
+
+def paper_run_problems(cfg, overridden):
+    """Why this run could not stand as a paper result. Runs named dev_* are
+    exempt: experimenting is what they are for.
+
+    Checked before any GPU time is spent, because each problem would otherwise
+    surface hours later as a number that cannot share a table with the others.
+    """
+    if cfg["run_name"].startswith("dev_"):
+        return []
+    problems = []
+    changed = git("status", "--porcelain", "--", "ml_pipeline", "data/splits")
+    if changed:
+        files = "\n".join("      " + line for line in changed.splitlines())
+        problems.append(f"uncommitted changes to the code, configs or splits, so the "
+                        f"result could not be traced to a commit:\n{files}")
+    departures = sorted(set(overridden) - PAPER_OVERRIDES)
+    if departures:
+        problems.append(f"--set {', '.join(departures)} departs from the recipe the other "
+                        f"runs in its table use")
+    if cfg["subset"]:
+        problems.append("a subset run sees different images from every other run")
+    return problems
+
+
+def keep_awake():
+    """Ask Windows not to sleep while this process runs, as a video player does
+    during playback. No setting changes, and the request ends with the process.
+    It cannot stop sleep when the lid closes, or an update restart.
+
+    Returns None off Windows, else whether Windows accepted the request.
+    """
+    if sys.platform != "win32":
+        return None
+    import ctypes
+    es_continuous, es_system_required = 0x80000000, 0x00000001
+    set_state = ctypes.windll.kernel32.SetThreadExecutionState
+    set_state.argtypes, set_state.restype = [ctypes.c_uint], ctypes.c_uint
+    return set_state(es_continuous | es_system_required) != 0
+
+
+def environment():
     dirty = git("status", "--porcelain", "--untracked-files=no")
     return {
         "python": platform.python_version(),
@@ -315,8 +360,15 @@ def main():
     elif args.resume:
         raise SystemExit(f"nothing to resume: {last_path} does not exist")
 
+    problems = paper_run_problems(cfg, [item.partition("=")[0] for item in args.set])
+    if problems:
+        raise SystemExit(f"'{run}' is not named dev_..., so it has to be able to stand as a "
+                         f"paper result, but:\n  - " + "\n  - ".join(problems)
+                         + "\nCommit the changes first, or give the run a dev_ name to experiment.")
+
     os.makedirs(run_dir, exist_ok=True)
     log = make_logger(os.path.join(run_dir, "train.log"))
+    awake = keep_awake()
     track = state["track"] if state else {
         "epoch": 0, "step": 0, "best_f1": -1.0, "best_epoch": 0, "bad_epochs": 0,
         "train_time_s": 0.0, "peak_vram_gb": 0.0, "training_done": False, "history": []}
@@ -371,6 +423,9 @@ def main():
     log(f"recipe  AdamW lr {cfg['lr']:g} wd {cfg['weight_decay']:g}  warmup {cfg['warmup_epochs']:g} ep, "
         f"cosine to {cfg['min_lr']:g}  {cfg['epochs']} ep x {steps_per_epoch} steps  "
         f"batch {cfg['batch_size']}  {cfg['amp_dtype']}")
+    if awake is not None:
+        log("power   " + ("Windows will not sleep while this runs (closing the lid still will)"
+                          if awake else "WARNING: could not stop Windows sleeping; disable sleep yourself"))
     log("=" * 78)
 
     csv_path = os.path.join(run_dir, "log.csv")

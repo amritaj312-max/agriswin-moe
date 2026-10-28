@@ -111,8 +111,7 @@ names the model. Each run writes `results/<run>.json` — config, environment, g
 commit, per-epoch history, val and test metrics, and a fingerprint of the exact
 images in each split — and keeps weights under `checkpoints/<run>/`
 (git-ignored). The test split is scored once, at the end, on the best-val
-weights. **Commit before a real run**: the JSON records whether the tree was
-dirty.
+weights.
 
 Long runs survive interruption, and can be split across sessions:
 
@@ -131,6 +130,21 @@ python ml_pipeline/src/training/train.py --config <same> --set epochs=2 run_name
 
 Every metric is checked against scikit-learn by
 `python ml_pipeline/src/evaluation/metrics.py`.
+
+What protects a result:
+
+- **Overfitting.** Heavy augmentation, dropout, stochastic depth and weight decay
+  while training; early stopping on val macro-F1; and the run keeps the weights
+  from its best val epoch, so overfitting in later epochs never reaches a result.
+- **Test contamination.** The test split is scored once, at the end, and chooses
+  nothing; group-aware splits keep near-duplicate images on one side.
+- **Unfair comparisons.** A paper run — any run not named `dev_` — refuses to
+  start with uncommitted code, configs or splits, or with `--set` changing the
+  recipe; `summarize_results.py` warns if finished runs saw different images or
+  used different recipes.
+- **Lost hours.** Checkpoints are written atomically every epoch and resume where
+  they stopped; Windows is kept awake while a run trains; a run whose losses turn
+  non-finite stops instead of training on garbage.
 
 ## Hardware
 
