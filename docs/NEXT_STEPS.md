@@ -385,6 +385,20 @@ seed and the name — a paper run is allowed to change those two:
 .venv/Scripts/python.exe ml_pipeline/src/training/train.py --config ml_pipeline/configs/baselines/efficientnet_b0.yaml --set seed=1 run_name=efficientnet_b0_seed1
 ```
 
+**To run several trainings unattended, one after another,** list them in a queue
+file — `ml_pipeline/configs/queues/baselines.txt` holds the baselines — and
+start:
+
+```powershell
+.venv/Scripts/python.exe ml_pipeline/src/training/run_queue.py ml_pipeline/configs/queues/baselines.txt
+```
+
+The queue waits for the charger before each run, commits each result as it
+lands (and pushes it, once GitHub is set up), stops without committing if a
+result looks wrong, and resumes a run that crashed. After a restart, start the
+same command again: finished runs are skipped, interrupted ones resumed. Its
+log is `checkpoints\queue.log`.
+
 **To try something that is not a paper result,** give it a name starting with
 `dev_` and override what you like. Git ignores these results:
 

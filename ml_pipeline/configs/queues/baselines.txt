@@ -1,0 +1,10 @@
+# The Phase 2 baselines, in order. One train.py argument line per run.
+#   python ml_pipeline/src/training/run_queue.py ml_pipeline/configs/queues/baselines.txt
+# Finished runs are skipped. Swin-V2-T goes first among the rest because it is
+# the gate (expect ~99-99.9%): a bad result stops the queue before the others
+# spend GPU time on a broken pipeline.
+--config ml_pipeline/configs/baselines/efficientnet_b0.yaml --set seed=1 run_name=efficientnet_b0_seed1
+--config ml_pipeline/configs/baselines/swinv2_tiny.yaml
+--config ml_pipeline/configs/baselines/efficientnet_b0.yaml
+--config ml_pipeline/configs/baselines/mobilevit_s.yaml
+--config ml_pipeline/configs/baselines/efficientnet_b0.yaml --set seed=2 run_name=efficientnet_b0_seed2

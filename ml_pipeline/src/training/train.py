@@ -59,6 +59,7 @@ from classes import NUM_CLASSES, PLANTVILLAGE_CLASSES  # noqa: E402
 from classifier import Classifier  # noqa: E402
 from dataset import build_loaders  # noqa: E402
 from metrics import summarize  # noqa: E402
+from power import keep_awake  # noqa: E402
 
 RECIPE = os.path.join(paths.REPO_ROOT, "ml_pipeline", "configs", "recipe.yaml")
 CHECKPOINT_DIR = os.path.join(paths.REPO_ROOT, "checkpoints")
@@ -270,22 +271,6 @@ def paper_run_problems(cfg, overridden):
     if cfg["subset"]:
         problems.append("a subset run sees different images from every other run")
     return problems
-
-
-def keep_awake():
-    """Ask Windows not to sleep while this process runs, as a video player does
-    during playback. No setting changes, and the request ends with the process.
-    It cannot stop sleep when the lid closes, or an update restart.
-
-    Returns None off Windows, else whether Windows accepted the request.
-    """
-    if sys.platform != "win32":
-        return None
-    import ctypes
-    es_continuous, es_system_required = 0x80000000, 0x00000001
-    set_state = ctypes.windll.kernel32.SetThreadExecutionState
-    set_state.argtypes, set_state.restype = [ctypes.c_uint], ctypes.c_uint
-    return set_state(es_continuous | es_system_required) != 0
 
 
 def environment():

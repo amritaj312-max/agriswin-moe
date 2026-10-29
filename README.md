@@ -134,6 +134,11 @@ recipes. For anything that is not a paper result, override values and use a
 python ml_pipeline/src/training/train.py --config <same> --set epochs=2 run_name=dev_try
 ```
 
+To run several trainings unattended, `ml_pipeline/src/training/run_queue.py`
+takes a list of them, one per line (e.g. `ml_pipeline/configs/queues/baselines.txt`):
+it waits for the charger, commits each result as it lands, stops if a result
+looks wrong, and resumes a run that crashed.
+
 Every metric is checked against scikit-learn by
 `python ml_pipeline/src/evaluation/metrics.py`.
 
