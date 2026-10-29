@@ -4,10 +4,9 @@ A Hybrid Vision Transformer with Shape-Texture Decoupled Attention, Sparse
 Mixture-of-Experts, and On-Device SLM Advisory for Uncertainty-Aware Offline
 Plant Disease Diagnosis.
 
-**Status:** Phase 2. Data downloaded and split; the shared training loop is
-written and verified (a 2-epoch EfficientNet-B0 test run reached 99.03% test
-accuracy). **No paper results yet** — every number in the design docs is a
-target, not a measurement.
+**Status:** Phase 2, baselines in progress. First paper result: EfficientNet-B0
+(seed 1) — 99.77% test accuracy, 99.65% macro-F1, ECE 0.13%. Every other number
+in the design docs is still a target, not a measurement.
 
 - [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md) — the step-by-step guide: what to open, what to type, what you should see.
 - [docs/ACTION_PLAN.md](docs/ACTION_PLAN.md) — scope, the paper's table design, and why.

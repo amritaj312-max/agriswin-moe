@@ -4,9 +4,11 @@ The hands-on guide: what to open, what to type, what you should see, and what to
 do when something looks wrong. For *why* each step exists, see
 [ACTION_PLAN.md](ACTION_PLAN.md).
 
-**Where you are (28 Oct 2026):** data downloaded and split; training loop written
-and tested — a 2-epoch EfficientNet-B0 test run reached 99.03% test accuracy.
-**There are no paper results yet.** Next: train the three baselines.
+**Where you are (29 Oct 2026):** the first paper result is in — EfficientNet-B0,
+seed 1: **99.77% test accuracy, 99.65% macro-F1, ECE 0.13%** (19 mistakes in
+8,155 test images). Next, in this order: Swin-V2-T overnight (Part D), then
+EfficientNet-B0 with the default seed (Part B), MobileViT-S (Part C), and
+EfficientNet-B0 with seed 2 (Part G, "another random seed").
 
 ---
 
@@ -354,6 +356,7 @@ Claude, and ends the way Part E does: a summary table and a commit.
 | You see | It means | Do this |
 |---|---|---|
 | The laptop slept or restarted, or the window closed | the run stopped part-way | run the **same command with `--resume` added** at the end. It continues from the last finished epoch |
+| A run stalled for a while, then crawled at about a third of its speed | the lid was closed (the laptop sleeps and the run waits), and the charger was out — on battery the GPU runs at a third of its speed, and drained a full battery to 29% in 41 minutes | plug the charger back in: the run speeds up by itself. **To move the laptop mid-run**, press Ctrl+C first, move it, plug it in, then `--resume` |
 | `is not named dev_..., so it has to be able to stand as a paper result` | the code, configs or splits have uncommitted changes, or `--set` changed the recipe | commit first (`git add`, then `git commit`), or drop the `--set`. To experiment, name the run `dev_...` |
 | `already holds a run: pass --resume to continue it` | that run already exists | add `--resume` to continue it — or, to start from zero, delete the folder `checkpoints\<run name>` first |
 | `config differs from the checkpoint in [...]` | the recipe or a config changed since the run began | undo the change. Never edit `recipe.yaml` part-way through a set of runs |
