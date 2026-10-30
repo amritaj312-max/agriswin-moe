@@ -37,7 +37,7 @@ weight_decay: 0.05         # not applied to biases, norm/scale params or positio
 clip_grad: 5.0             # global gradient-norm clip; 0 disables
 label_smoothing: 0.0
 drop_rate: 0.2             # the MC-dropout layer, just before the classifier
-drop_path_rate: 0.1
+drop_path_rate: 0.1        # stochastic depth on residual branches only (classifier.py says why)
 amp_dtype: float16         # bfloat16 if a run reports non-finite losses
 early_stop_patience: 10    # epochs without a val macro-F1 improvement; 0 disables
 seed: 42
