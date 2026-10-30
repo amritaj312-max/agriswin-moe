@@ -4,9 +4,12 @@ A Hybrid Vision Transformer with Shape-Texture Decoupled Attention, Sparse
 Mixture-of-Experts, and On-Device SLM Advisory for Uncertainty-Aware Offline
 Plant Disease Diagnosis.
 
-**Status:** Phase 2, baselines in progress. First paper result: EfficientNet-B0
-(seed 1) — 99.77% test accuracy, 99.65% macro-F1, ECE 0.13%. Every other number
-in the design docs is still a target, not a measurement.
+**Status:** Phase 2 baselines trained, one re-running. On the 8,155-image test
+split: Swin-V2-T 99.82% accuracy, 99.78% macro-F1, ECE 0.13%; EfficientNet-B0
+99.77 ± 0.02%, 99.66 ± 0.03%, ECE 0.14 ± 0.02% (mean ± sd, three seeds).
+MobileViT-S is being re-trained after a stochastic-depth bug, now fixed, wiped
+about 1 in 5 of its training images per step. Every other number in the design
+docs is still a target, not a measurement.
 
 - [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md) — the step-by-step guide: what to open, what to type, what you should see.
 - [docs/ACTION_PLAN.md](docs/ACTION_PLAN.md) — scope, the paper's table design, and why.
