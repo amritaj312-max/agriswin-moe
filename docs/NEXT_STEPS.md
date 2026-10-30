@@ -4,20 +4,27 @@ The hands-on guide: what to open, what to type, what you should see, and what to
 do when something looks wrong. For *why* each step exists, see
 [ACTION_PLAN.md](ACTION_PLAN.md).
 
-**Where you are (30 Oct 2026):** four baseline runs are in. Swin-V2-T scored
-**99.82% test accuracy, 99.78% macro-F1, ECE 0.13%** (15 mistakes in 8,155 test
-images). EfficientNet-B0 scored **99.77 ± 0.02%, 99.66 ± 0.03%, ECE 0.14 ±
-0.02%** over seeds 42, 1 and 2 (17–20 mistakes). MobileViT-S is being re-trained:
-its first run hit a stochastic-depth bug, now fixed, that wiped about 1 in 5 of
-its training images on every step. The re-run starts by itself once the charger
-is in, and takes ~4.2 h. Then Part E, then Phase 3.
+**Where you are (30 Oct 2026):** the baselines (A–D) are trained and checked,
+scored on identical images with one recipe. These are Table II's baseline rows
+(Part E) — copy them in once the paper skeleton exists:
 
-All five runs are within seven test images of each other, and a 95%
+| Model | Params | Test acc | Macro-F1 | ECE | Mistakes (of 8,155) |
+|---|---|---|---|---|---|
+| EfficientNet-B0 (seeds 42, 1, 2: mean ± sd) | 4.06M | 99.77 ± 0.02% | 99.66 ± 0.03% | 0.14 ± 0.02% | 17–20 |
+| MobileViT-S | 4.96M | 99.79% | 99.65% | 0.17% | 17 |
+| Swin-V2-T | 27.6M | 99.82% | 99.78% | 0.13% | 15 |
+
+MobileViT-S's first run hit a stochastic-depth bug, since fixed, that wiped
+about 1 in 5 of its training images on every step; the row above is the re-run.
+Next: Phase 3 (Part F).
+
+All five runs are within five test images of each other, and a 95%
 confidence interval on 8,155 images is about ±0.1 points, so **PlantVillage
 accuracy alone cannot rank models or show what a new module adds.** Phase 3's
 ablations must also be judged where differences can show up: the corn
-leaf-spot pair (Swin-V2-T makes 3 mistakes there, EfficientNet-B0 7–9),
-PlantDoc, and calibration.
+leaf-spot pair (Swin-V2-T makes 3 mistakes there, MobileViT-S and
+EfficientNet-B0 7–9 — Swin-V2-T's whole lead comes from this pair), PlantDoc,
+and calibration.
 
 ---
 
@@ -277,10 +284,11 @@ Differences to expect:
 - About 6 minutes per epoch. The first progress line of a session shows only
   ~60 img/s while the GPU tunes itself to this model; after that, ~109 img/s.
 - **Its training accuracy should track the other models'** and pass ~95% within
-  a few epochs. The first run, before a fix in `classifier.py`, sat near 85%
-  for all 40 epochs while val accuracy reached 99.8%: drop-path was wiping
-  about 1 in 5 training images. Training accuracy that stays far below val
-  accuracy again means something is wrong — tell Claude.
+  a few epochs (the re-run did at epoch 4, and finished at 99.7%). The first
+  run, before a fix in `classifier.py`, sat near 85% for all 40 epochs while
+  val accuracy reached 99.8%: drop-path was wiping about 1 in 5 training
+  images. Training accuracy that stays far below val accuracy again means
+  something is wrong — tell Claude.
 
 Then check it (B5) and commit `results/mobilevit_s.json` (B6). **If MobileViT-S
 finishes clearly below EfficientNet-B0, tell Claude** before carrying on: all
