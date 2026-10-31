@@ -34,6 +34,24 @@ def duration(seconds):
     return f"{seconds / 3600:.1f}h" if seconds >= 3600 else f"{seconds / 60:.0f}m"
 
 
+def compute_time(history):
+    """GPU time a run really needed, as median epoch x epochs.
+
+    train_time_s is wall clock, so it also counts any epoch the machine spent
+    asleep (a closed lid suspends the process) or throttled on battery, which
+    on this laptop inflated three of the baselines by 20-56%. The paper's cost
+    column has to be compute, not wall clock, so it is reported from the median
+    epoch -- unaffected by however many epochs were stalled, as long as most
+    were not. `stalled` counts epochs that took over 1.5x the median.
+    """
+    times = sorted(row["time_s"] for row in history)
+    if not times:
+        return 0.0, 0
+    middle = times[len(times) // 2] if len(times) % 2 else \
+        (times[len(times) // 2 - 1] + times[len(times) // 2]) / 2
+    return middle * len(times), sum(1 for t in times if t > 1.5 * middle)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Summarise finished training runs")
     parser.add_argument("--dev", action="store_true", help="include dev_* runs")
@@ -52,7 +70,7 @@ def main():
         return
 
     header = (f"{'run':<26}{'params':>8}{'epochs':>9}{'test acc':>10}{'macro-F1':>10}"
-              f"{'ECE':>8}{'NLL':>8}{'time':>7}   notes")
+              f"{'ECE':>8}{'NLL':>8}{'GPU':>7}   notes")
     print(header)
     print("-" * len(header))
     for r in runs:
@@ -64,12 +82,16 @@ def main():
             notes.append("uncommitted code")
         if r["status"] == "early_stopped":
             notes.append("early stop")
+        gpu, stalled = compute_time(tr["history"])
+        if stalled:
+            notes.append(f"{stalled} epoch(s) stalled, {duration(tr['train_time_s'])} wall clock")
         print(f"{r['run_name']:<26}{r['model']['params'] / 1e6:>7.2f}M"
               f"{tr['best_epoch']:>5}/{tr['epochs_run']:<3}"
               f"{test['acc']:>10.2%}{test['macro_f1']:>10.2%}{test['ece']:>8.2%}"
-              f"{test['nll']:>8.4f}{duration(tr['train_time_s']):>7}   {', '.join(notes)}")
+              f"{test['nll']:>8.4f}{duration(gpu):>7}   {', '.join(notes)}")
 
     print("\nepochs = best epoch / epochs run.  ECE and NLL: lower is better.")
+    print("GPU = median epoch x epochs, so sleeping and battery throttling do not count.")
 
     # subset runs differ by design, so they are left out of both checks
     full = [r for r in runs if not r["config"].get("subset")]

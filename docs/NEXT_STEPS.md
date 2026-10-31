@@ -4,7 +4,7 @@ The hands-on guide: what to open, what to type, what you should see, and what to
 do when something looks wrong. For *why* each step exists, see
 [ACTION_PLAN.md](ACTION_PLAN.md).
 
-**Where you are (30 Oct 2026):** the baselines (A–D) are trained and checked,
+**Where you are (31 Oct 2026):** the baselines (A–D) are trained and checked,
 scored on identical images with one recipe. These are Table II's baseline rows
 (Part E) — copy them in once the paper skeleton exists:
 
@@ -16,7 +16,19 @@ scored on identical images with one recipe. These are Table II's baseline rows
 
 MobileViT-S's first run hit a stochastic-depth bug, since fixed, that wiped
 about 1 in 5 of its training images on every step; the row above is the re-run.
-Next: Phase 3 (Part F).
+
+**Every log from those four days has been audited.** Nothing was lost and no
+number is tainted: no run ever crashed, was restarted or resumed, and not one
+step in any run produced a non-finite loss. A closed lid suspends the training
+process and a flat battery slows the GPU down, but neither changes the
+arithmetic a step performs, and nothing in `train.py` depends on the clock —
+the learning rate follows the step count and early stopping counts epochs. The
+interruptions cost **2 h 45 min of waiting across the four days, and nothing
+else.** The one real fault in that window was the MobileViT-S bug above, which
+training speed had nothing to do with. What the stalls *did* spoil is the
+`train_time_s` each run recorded, which is wall clock and so counts time spent
+asleep; `summarize_results.py` now reports median epoch × epochs instead, and
+that is the GPU column to quote in the paper.
 
 All five runs are within five test images of each other, and a 95%
 confidence interval on 8,155 images is about ±0.1 points, so **PlantVillage
@@ -25,6 +37,51 @@ ablations must also be judged where differences can show up: the corn
 leaf-spot pair (Swin-V2-T makes 3 mistakes there, MobileViT-S and
 EfficientNet-B0 7–9 — Swin-V2-T's whole lead comes from this pair), PlantDoc,
 and calibration.
+
+---
+
+## Do these next, in this order
+
+Steps 1 and 2 are yours and take six minutes between them. Everything after
+that starts by asking Claude.
+
+**1. Get the work off this laptop (5 min).** Four days of results exist in one
+place. Open [github.com/new](https://github.com/new), name the repository
+`agriswin-moe`, choose **Private**, leave *Add a README* unticked, click
+**Create repository**, and paste the address it gives you to Claude. Claude
+runs the two push commands. Nothing else below matters as much as this.
+
+**2. Stop the lid from pausing a run (1 min).** This is what cost most of the
+2 h 45 min. In PowerShell:
+
+```powershell
+powercfg /setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
+powercfg /setactive SCHEME_CURRENT
+```
+
+Now closing the lid **while plugged in** no longer sleeps the laptop; on
+battery it still does, which protects the battery. Keep the lid open anyway —
+this is insurance against knocking it shut, not permission to close it, because
+a closed lid traps heat and a hot GPU throttles. To undo it, run the same two
+lines with `1` in place of the final `0`.
+
+**3. Ask Claude for the evaluation harness (~1 h GPU, no training).** This
+comes *before* ST-DAM, which is a change from the original plan, and the
+baselines are the reason: they land within five test images of each other, so
+PlantVillage accuracy cannot tell you whether ST-DAM helped. The harness —
+PlantDoc cross-dataset accuracy, MC-dropout uncertainty, reliability diagram,
+risk-coverage curve — is what will be able to. It needs no retraining, runs on
+the three models already trained, and fills three empty columns of Table II.
+Built after ST-DAM instead, it would leave those four runs unjudgeable.
+
+**4. Ask Claude for the ST-DAM module (no GPU).** Code, configs and checks.
+Expect to be asked one question first: how much GPU time to spend on the
+ablation, since four rows at ~7.5 h each is four nights on this laptop.
+
+**5. Run the ST-DAM ablation (4 nights).** The queue runner handles it
+unattended, one run per night, committing each result as it lands.
+
+**6. Then the MoE head, and the full teacher.** Part F has the rest.
 
 ---
 
@@ -115,8 +172,12 @@ and the screen turning off is fine. The rest is up to you. Do these once:
    **Pause updates** for 1 week. An overnight update restart kills a run, and
    no program can prevent it.
 4. **Keep the lid open**, on a hard flat surface — not a bed or a lap. Closing
-   the lid still puts the laptop to sleep, and blocked vents make the GPU run
-   hotter than the 75–78 °C it measured under load, which slows it down.
+   the lid puts the laptop to sleep by default, which suspends the run until
+   someone opens it again; blocked vents also make the GPU run hotter than the
+   75–78 °C it measured under load, which slows it down. The two `powercfg`
+   lines in *Do these next* stop a closed lid sleeping the machine while it is
+   plugged in — worth running, because over four days of baselines a closed lid
+   and a pulled charger cost 2 h 45 min of waiting.
 
 If a run gets interrupted anyway, see Part G: you lose one epoch at most.
 
@@ -330,6 +391,17 @@ Part G. Then check (B5) and commit `results/swinv2_tiny.json` (B6).
 Copy **params, test acc, macro-F1 and ECE** of the three baselines into Table II.
 Leave PlantDoc accuracy, TFLite size and latency empty; they come in Phases 5–6.
 
+Two things that table prints are worth understanding before quoting them:
+
+- **`GPU`** is the median epoch times the number of epochs, not the clock time
+  the run took. Quote this as training cost. A run that slept or ran on battery
+  also says how many epochs stalled and what the clock said, and those two
+  numbers differ by up to 56%.
+- **`Splits`** and **`Recipe`** are the lines that make the table legitimate:
+  they confirm every row saw the same images and the same hyperparameters. If
+  either ever prints a WARNING, the rows cannot share a table — stop and tell
+  Claude.
+
 Then tell Claude **"baselines done"** and paste the table. Claude checks the
 numbers and starts Phase 3.
 
@@ -375,7 +447,7 @@ Claude, and ends the way Part E does: a summary table and a commit.
 | You see | It means | Do this |
 |---|---|---|
 | The laptop slept or restarted, or the window closed | the run stopped part-way | run the **same command with `--resume` added** at the end. It continues from the last finished epoch |
-| A run stalled for a while, then crawled at about a third of its speed | the lid was closed (the laptop sleeps and the run waits), and the charger was out — on battery the GPU runs at a third of its speed, and drained a full battery to 29% in 41 minutes | plug the charger back in: the run speeds up by itself. **To move the laptop mid-run**, press Ctrl+C first, move it, plug it in, then `--resume` |
+| A run stalled for a while, then crawled at about a third of its speed | the lid was closed (the laptop sleeps and the run waits), and the charger was out — on battery the GPU runs at a third of its speed, and drained a full battery to 8–9% in under an hour | plug the charger back in: the run speeds up by itself, and **the result is unaffected** — a suspended or throttled run does the same arithmetic, just later. **To move the laptop mid-run**, press Ctrl+C first, move it, plug it in, then `--resume` |
 | `is not named dev_..., so it has to be able to stand as a paper result` | the code, configs or splits have uncommitted changes, or `--set` changed the recipe | commit first (`git add`, then `git commit`), or drop the `--set`. To experiment, name the run `dev_...` |
 | `already holds a run: pass --resume to continue it` | that run already exists | add `--resume` to continue it — or, to start from zero, delete the folder `checkpoints\<run name>` first |
 | `config differs from the checkpoint in [...]` | the recipe or a config changed since the run began | undo the change. Never edit `recipe.yaml` part-way through a set of runs |
