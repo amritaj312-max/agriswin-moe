@@ -71,11 +71,13 @@ step 3's harness produces them properly.
 Steps 1 and 2 are yours and take six minutes between them. Everything after
 that starts by asking Claude.
 
-**1. Get the work off this laptop (5 min).** Four days of results exist in one
-place. Open [github.com/new](https://github.com/new), name the repository
-`agriswin-moe`, choose **Private**, leave *Add a README* unticked, click
-**Create repository**, and paste the address it gives you to Claude. Claude
-runs the two push commands. Nothing else below matters as much as this.
+**1. ~~Get the work off this laptop.~~ Done (31 Oct).** Everything committed
+is backed up to the private repository
+[github.com/amritaj312-max/agriswin-moe](https://github.com/amritaj312-max/agriswin-moe),
+and the training queue now pushes each result the moment it commits it, with
+no sign-in prompt. What GitHub does *not* hold is listed in Part H: the images
+(re-downloadable) and the trained weights in `checkpoints/` (not
+re-downloadable — losing them means retraining).
 
 **2. Stop the lid from pausing a run (1 min).** This is what cost most of the
 2 h 45 min. In PowerShell:
@@ -515,10 +517,12 @@ start:
 ```
 
 The queue waits for the charger before each run, commits each result as it
-lands (and pushes it, once GitHub is set up), stops without committing if a
-result looks wrong, and resumes a run that crashed. After a restart, start the
-same command again: finished runs are skipped, interrupted ones resumed. Its
-log is `checkpoints\queue.log`.
+lands and pushes it to GitHub, stops without committing if a result looks
+wrong, and resumes a run that crashed. After a restart, start the same command
+again: finished runs are skipped, interrupted ones resumed. Its log is
+`checkpoints\queue.log`, where each result should be followed by a `pushed`
+line. A `push failed` line leaves the result safely committed on the laptop;
+send it later with `git push`.
 
 **To try something that is not a paper result,** give it a name starting with
 `dev_` and override what you like. Git ignores these results:
@@ -551,17 +555,26 @@ so now is the time to choose.
 
 ### H1. Get the code there
 
-**Best: through GitHub.** It also backs your work up: today the code and its
-history exist only on this laptop's disk.
+**Best: through GitHub.** The code, splits and results are in the private
+repository `amritaj312-max/agriswin-moe`. On the new machine:
 
-1. On [github.com](https://github.com), create a new **private** repository —
-   say `agriswin-moe` — with no README, licence or .gitignore.
-2. Give Claude its address, and Claude connects the laptop to it and pushes.
-   (By hand, in PowerShell in the project folder: `git remote add origin
-   <address>`, then `git push -u origin main`.)
-3. On the new machine: `git clone <address>`, then `cd agriswin-moe`.
+```powershell
+git clone https://github.com/amritaj312-max/agriswin-moe.git
+cd agriswin-moe
+```
+
+The repository is private, so the new machine has to be signed in to the
+`amritaj312-max` GitHub account; the first `git clone` there opens a sign-in.
 
 **Or copy the folder** — leaving out `.venv` and `checkpoints`.
+
+GitHub holds everything except two things, both deliberately left out by
+`.gitignore`: the images in `data/raw/` (H2 moves them, or `download.py`
+fetches them again) and the trained weights in `checkpoints/`, which nothing
+can re-download. A new machine does not need old weights to train new runs,
+but Phases 5 and 6 evaluate and distil the models already trained here, so
+keep `checkpoints/` safe on this laptop or copy it across alongside the
+images.
 
 ### H2. Move the images as one file
 

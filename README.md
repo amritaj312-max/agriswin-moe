@@ -13,6 +13,10 @@ a target, not a measurement.
 - [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md) — the step-by-step guide: what to open, what to type, what you should see.
 - [docs/ACTION_PLAN.md](docs/ACTION_PLAN.md) — scope, the paper's table design, and why.
 
+Backed up to the private repository
+[amritaj312-max/agriswin-moe](https://github.com/amritaj312-max/agriswin-moe);
+`run_queue.py` pushes each result as it lands.
+
 > **The images live in `data/raw/`, but are not committed.** They sit inside the
 > project next to the code; `.gitignore` excludes `data/raw/`, so the 1.7 GB of
 > JPEGs is never staged, committed or pushed. What *is* committed is
