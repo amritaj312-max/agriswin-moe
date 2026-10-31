@@ -38,6 +38,32 @@ leaf-spot pair (Swin-V2-T makes 3 mistakes there, MobileViT-S and
 EfficientNet-B0 7–9 — Swin-V2-T's whole lead comes from this pair), PlantDoc,
 and calibration.
 
+**A scratch probe on PlantDoc says PlantDoc accuracy cannot rank them
+either**, and this shapes how the harness in step 3 has to be built. Scoring
+the five finished checkpoints on 2,586 PlantDoc field images, zero-shot,
+gives 21–26% — the domain-shift collapse the literature reports (paper [02]:
+98.88% → 13.10%), and no module will repair it. Three findings matter for the
+experiment design:
+
+- **Changing only the seed moves PlantDoc accuracy by 4.2 points** (three
+  EfficientNet-B0 seeds: 21.4%, 22.9%, 25.6%), which is larger than any gap
+  between *models*. So a single-seed PlantDoc number ranks seeds, not
+  architectures, and a McNemar test between two single runs reports
+  significance for a seed change alone. Every PlantDoc claim needs either
+  several seeds per configuration or seed-matched pairs.
+- **Swin-V2-T's PlantVillage lead does not transfer.** It is last but one on
+  PlantDoc (21.5%, against MobileViT-S's 24.3%), so "best backbone" has to be
+  said per dataset.
+- **Calibration is where the models genuinely separate.** On PlantDoc,
+  Swin-V2-T is 86% confident while 22% correct (ECE 64%); EfficientNet-B0 and
+  MobileViT-S sit at 76–78% confident (ECE 50–57%). A 14-point ECE gap dwarfs
+  anything accuracy shows, and being confidently wrong under shift is exactly
+  what Novelty 3's abstention is for.
+
+Those numbers come from a throwaway script, not from the pipeline — they are
+a design input, not results, and nothing from them belongs in the paper until
+step 3's harness produces them properly.
+
 ---
 
 ## Do these next, in this order
@@ -72,7 +98,11 @@ PlantVillage accuracy cannot tell you whether ST-DAM helped. The harness —
 PlantDoc cross-dataset accuracy, MC-dropout uncertainty, reliability diagram,
 risk-coverage curve — is what will be able to. It needs no retraining, runs on
 the three models already trained, and fills three empty columns of Table II.
-Built after ST-DAM instead, it would leave those four runs unjudgeable.
+Built after ST-DAM instead, it would leave those four runs unjudgeable. The
+probe described above also means it must report **calibration and abstention,
+seed-matched**, rather than one PlantDoc accuracy per model. Three PlantDoc
+images (of 2,589) still have paths too long for Windows to open, and it should
+either repair or record them.
 
 **4. Ask Claude for the ST-DAM module (no GPU).** Code, configs and checks.
 Expect to be asked one question first: how much GPU time to spend on the
