@@ -50,6 +50,7 @@ from classifier import Classifier  # noqa: E402
 from dataset import PlantVillageSplit, eval_transform  # noqa: E402
 from metrics import summarize as summarize_metrics  # noqa: E402
 from plantdoc import MAPPED_CLASS_IDX, PlantDocDataset  # noqa: E402
+from plantdoc import fingerprint as plantdoc_fingerprint  # noqa: E402
 from uncertainty import summarize as summarize_uncertainty  # noqa: E402
 
 CHECKPOINT_DIR = os.path.join(paths.REPO_ROOT, "checkpoints")
@@ -60,6 +61,9 @@ EVAL_DIR = os.path.join(RESULTS_DIR, "eval")
 DEFAULT_PASSES = 20
 DEPLOYMENT_PASSES = 5
 BATCH = 64
+# test images allowed to change prediction when re-scoring on a GPU model other
+# than the one that trained the run (see the integrity check in evaluate_run)
+MAX_FLIPS = 2
 
 
 def mc_dropout_modules(model):
@@ -183,20 +187,35 @@ def evaluate_run(run, passes, log):
         del feats, logits, probs
         torch.cuda.empty_cache()
 
-    # --- the two integrity checks -------------------------------------------
+    # --- the integrity check ------------------------------------------------
+    # On the GPU model that trained the run, re-scoring must reproduce the
+    # committed result exactly. On a different one (a laptop run scored on
+    # Colab, say) fp16 kernels differ, and an image whose top two classes are
+    # nearly tied can flip, so up to MAX_FLIPS test images may differ. A wrong
+    # checkpoint is off by far more than that, so the check still catches it.
     pv = out["plantvillage_test"]["deterministic"]
+    gpu_now = torch.cuda.get_device_name(0)
+    same_gpu = gpu_now == trained["environment"].get("gpu")
+    n_test = len(splits["plantvillage_test"])
+    flips = round(abs(pv["acc"] - trained["test"]["acc"]) * n_test)
+    allowed = 0 if same_gpu else MAX_FLIPS
     checks = {
-        "test_acc_matches_training": abs(pv["acc"] - trained["test"]["acc"]) < 1e-9,
-        "test_macro_f1_matches_training": abs(pv["macro_f1"] - trained["test"]["macro_f1"]) < 1e-9,
+        "test_images_differing_from_training": flips,
+        "allowed": allowed,
+        "trained_on_gpu": trained["environment"].get("gpu"),
         "split_fingerprint": trained["data"]["fingerprint"]["test"],
     }
-    if not (checks["test_acc_matches_training"] and checks["test_macro_f1_matches_training"]):
+    exact_f1 = abs(pv["macro_f1"] - trained["test"]["macro_f1"]) < 1e-9
+    if flips > allowed or (same_gpu and not exact_f1):
         raise SystemExit(
             f"{run}: re-scoring best.pt gives test acc {pv['acc']:.6f} / macro-F1 "
             f"{pv['macro_f1']:.6f}, but results/{run}.json recorded "
-            f"{trained['test']['acc']:.6f} / {trained['test']['macro_f1']:.6f}. The checkpoint "
-            f"and the published result are not the same model.")
-    log(f"    checks: PlantVillage test reproduces the committed result exactly")
+            f"{trained['test']['acc']:.6f} / {trained['test']['macro_f1']:.6f} "
+            f"({flips} images differ, {allowed} allowed on "
+            f"{'the same' if same_gpu else 'a different'} GPU). The checkpoint and the "
+            f"published result are not the same model.")
+    log(f"    checks: PlantVillage test reproduces the committed result "
+        + ("exactly" if flips == 0 else f"within {flips} image(s), on a different GPU"))
 
     del model
     torch.cuda.empty_cache()
@@ -209,6 +228,10 @@ def evaluate_run(run, passes, log):
         "passes": passes,
         "deployment_passes": DEPLOYMENT_PASSES,
         "trained_at_commit": trained["environment"]["git_commit"],
+        "evaluated_on_gpu": torch.cuda.get_device_name(0),
+        # which PlantDoc images, by content: compare.py refuses to put runs side
+        # by side unless this matches, however their files were named on disk
+        "plantdoc_fingerprint": plantdoc_fingerprint(),
         "checks": checks,
         "splits": out,
     }

@@ -85,6 +85,21 @@ def main():
     nice = "PlantDoc" if split == "plantdoc" else "PlantVillage test"
     n_images = evals[0]["splits"][split]["images"]
 
+    # runs scored on different images cannot share a table, however close the
+    # numbers look -- the same rule summarize_results.py applies to PlantVillage
+    key = "plantdoc_fingerprint" if split == "plantdoc" else None
+    if key:
+        groups = {}
+        for data in evals:
+            groups.setdefault(data.get(key, "missing (evaluated before the frozen set)"),
+                              []).append(data["run_name"])
+        if len(groups) > 1:
+            print(f"WARNING: these runs were scored on DIFFERENT {nice} images and must not "
+                  f"be compared -- re-run evaluate.py on all of them:")
+            for fp, names in groups.items():
+                print(f"    {fp}: {', '.join(names)}")
+            sys.exit(1)
+
     print(f"{len(evals)} evaluated run(s) on {nice} ({n_images:,} images)\n")
     header = (f"{'run':<24}{'model':<26}{'seed':>5}{'acc':>8}{'ECE':>8}"
               f"{'AURC':>8}{'acc@50%':>9}{'corn pair':>11}")

@@ -31,6 +31,11 @@ import paths  # noqa: E402
 DATASETS = {
     "plantvillage": {
         "url": "https://github.com/spMohanty/PlantVillage-Dataset.git",
+        # The upstream repository still changes (last on 2026-02-05, a README
+        # edit), so the commit every result was made on is pinned. Without it a
+        # download on another machine or day could hold different images.
+        # verify_data.py checks the bytes as well.
+        "commit": "7f7ecc7e1eaca78107e3affe7cb5abd9427e139a",
         "dest": "plantvillage",
         # only this subtree is checked out; the greyscale and segmented copies
         # are never fetched
@@ -40,6 +45,7 @@ DATASETS = {
     },
     "plantdoc": {
         "url": "https://github.com/pratikkayal/PlantDoc-Dataset.git",
+        "commit": "5467f6012d78d1c446145d5f582da6096f852ae8",     # unchanged since 2021
         "dest": "plantdoc",
         "sparse": None,          # small enough to take whole
         "expected_classes": 28,   # repo ships 28 train dirs; the paper says 27
@@ -148,6 +154,23 @@ def sanitized_checkout(name, dest):
     return written
 
 
+def pin(name, spec, dest):
+    """Move a fresh clone to the commit the frozen splits were built from.
+
+    A shallow clone takes upstream HEAD. While that is still the pinned commit
+    nothing happens; once upstream moves on, the pinned commit is fetched by
+    hash and checked out (sparse settings carry over).
+    """
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=dest,
+                          capture_output=True, text=True).stdout.strip()
+    if head == spec["commit"]:
+        return True
+    print(f"[{name}] upstream is at {head[:7]}, not the pinned {spec['commit'][:7]}; "
+          f"fetching the pinned commit")
+    return (run(["git", "fetch", "--depth", "1", "origin", spec["commit"]], cwd=dest)
+            and run(["git", "checkout", "--quiet", spec["commit"]], cwd=dest))
+
+
 def clone(name, spec):
     dest = os.path.join(paths.raw_dir(), spec["dest"])
 
@@ -180,6 +203,11 @@ def clone(name, spec):
             ok = run(["git", "sparse-checkout", "set"] + spec["sparse"], cwd=dest)
     else:
         ok = run(["git", "clone", "--depth", "1", spec["url"], dest])
+
+    if ok and not pin(name, spec, dest):
+        print(f"[{name}] FAILED to check out the pinned commit {spec['commit']}")
+        shutil.rmtree(dest, ignore_errors=True)
+        return None
 
     if not ok:
         # The objects may have arrived and only the checkout failed -- that is
