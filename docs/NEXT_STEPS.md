@@ -71,13 +71,18 @@ step 3's harness produces them properly.
 Steps 1 and 2 are yours and take six minutes between them. Everything after
 that starts by asking Claude.
 
-**1. ~~Get the work off this laptop.~~ Done (31 Oct).** Everything committed
-is backed up to the private repository
+**1. ~~Get the work off this laptop.~~ Done (31 Oct – 2 Nov).** Everything
+committed is backed up to the repository
 [github.com/amritaj312-max/agriswin-moe](https://github.com/amritaj312-max/agriswin-moe),
 and the training queue now pushes each result the moment it commits it, with
-no sign-in prompt. What GitHub does *not* hold is listed in Part H: the images
-(re-downloadable) and the trained weights in `checkpoints/` (not
-re-downloadable — losing them means retraining).
+no sign-in prompt. The five trained baselines' weights are backed up too, as
+the release
+[Phase 2 baseline weights](https://github.com/amritaj312-max/agriswin-moe/releases/tag/weights-phase2),
+every part checked byte for byte against the laptop's copy. Only the images
+are left out, and `download.py` fetches those again. **Weights trained from now
+on are not backed up automatically** — the queue pushes results, not
+checkpoints — so after each phase, ask Claude to add its weights as a release
+the same way.
 
 **2. Stop the lid from pausing a run (1 min).** This is what cost most of the
 2 h 45 min. In PowerShell:
@@ -555,26 +560,35 @@ so now is the time to choose.
 
 ### H1. Get the code there
 
-**Best: through GitHub.** The code, splits and results are in the private
-repository `amritaj312-max/agriswin-moe`. On the new machine:
+**Best: through GitHub.** The code, splits and results are in the repository
+`amritaj312-max/agriswin-moe`. On the new machine:
 
 ```powershell
 git clone https://github.com/amritaj312-max/agriswin-moe.git
 cd agriswin-moe
 ```
 
-The repository is private, so the new machine has to be signed in to the
-`amritaj312-max` GitHub account; the first `git clone` there opens a sign-in.
+While the repository is public, cloning needs no sign-in; if it is made private
+again, the first `git clone` opens a sign-in to the `amritaj312-max` account.
+Pushing results back always needs that sign-in.
 
 **Or copy the folder** — leaving out `.venv` and `checkpoints`.
 
-GitHub holds everything except two things, both deliberately left out by
-`.gitignore`: the images in `data/raw/` (H2 moves them, or `download.py`
-fetches them again) and the trained weights in `checkpoints/`, which nothing
-can re-download. A new machine does not need old weights to train new runs,
-but Phases 5 and 6 evaluate and distil the models already trained here, so
-keep `checkpoints/` safe on this laptop or copy it across alongside the
-images.
+GitHub's git history holds everything except what `.gitignore` deliberately
+leaves out: the images in `data/raw/` (H2 moves them, or `download.py` fetches
+them again) and the trained weights in `checkpoints/`. A new machine does not
+need old weights to train new runs, but Phases 5 and 6 evaluate and distil the
+models already trained here. The Phase 2 weights are in the release
+[weights-phase2](https://github.com/amritaj312-max/agriswin-moe/releases/tag/weights-phase2):
+download `SHA256SUMS.txt` and the parts of the runs you need into one folder,
+then run
+
+```powershell
+.venv/Scripts/python.exe ml_pipeline/src/training/restore_weights.py <that folder>
+```
+
+which joins the parts, checks each file's checksum and puts it at
+`checkpoints/<run>/best.pt`.
 
 ### H2. Move the images as one file
 
@@ -669,8 +683,10 @@ the session.
 ### H6. Bring the results back
 
 Commit `results/<run>.json` on the new machine and push it; on the laptop, run
-`git pull`. If later phases will run on the laptop, also copy back
-`checkpoints/<run>/best.pt` — the trained weights every later phase starts from.
+`git pull`. If later phases will run on the laptop, also bring back
+`checkpoints/<run>/best.pt` — the trained weights every later phase starts from
+— either by copying it, or by adding it to a GitHub release and restoring it
+with `restore_weights.py` as in H1.
 
 ---
 
