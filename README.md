@@ -179,10 +179,10 @@ headroom. Full numbers in `ml_pipeline/configs/hardware.md`.
 ```
 ml_pipeline/
   src/
-    data/        classes.py, download.py, build_splits.py, dataset.py, check_env.py
+    data/        classes.py, download.py, build_splits.py, dataset.py, plantdoc.py, check_env.py
     models/      classifier.py (backbone + MC-dropout head); ST-DAM, MoE  (Phase 3)
-    training/    train.py; distillation  (Phase 5)
-    evaluation/  metrics.py; calibration plots, Grad-CAM  (Phase 4)
+    training/    train.py, run_queue.py, restore_weights.py; distillation  (Phase 5)
+    evaluation/  metrics.py, uncertainty.py, evaluate.py, compare.py, figures.py
     export/      ONNX / TFLite  (Phase 5)
   configs/       recipe.yaml (shared), baselines/*.yaml (one per run), hardware.md
 data/
@@ -190,6 +190,7 @@ data/
   splits/        frozen split CSVs (committed)
 checkpoints/     weights and logs per run (git-ignored)
 results/         metrics JSON per run (committed; dev_* ignored)
+  eval/          cross-dataset and uncertainty metrics per run (committed)
 paper/           LaTeX source
 docs/            design docs + action plan
 ```

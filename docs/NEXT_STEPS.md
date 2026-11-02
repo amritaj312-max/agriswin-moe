@@ -419,6 +419,45 @@ Part G. Then check (B5) and commit `results/swinv2_tiny.json` (B6).
 
 ---
 
+## Part E2 — Cross-dataset and uncertainty evaluation (~10 min GPU, no training)
+
+Phase 4 of [ACTION_PLAN.md](ACTION_PLAN.md), and it runs **before** the ST-DAM
+ablations rather than after. The reason is in the status section at the top:
+the baselines land within five test images of each other on PlantVillage, so
+that number cannot show what a new module adds. These can.
+
+Three commands, in order. The first is the only one that needs the GPU:
+
+```powershell
+.venv/Scripts/python.exe ml_pipeline/src/evaluation/evaluate.py
+.venv/Scripts/python.exe ml_pipeline/src/evaluation/compare.py
+.venv/Scripts/python.exe ml_pipeline/src/evaluation/figures.py
+```
+
+**`evaluate.py`** scores every finished run on the PlantVillage test split and
+on all 2,589 PlantDoc field images, with MC-dropout uncertainty, and writes
+`results/eval/<run>.json`. It takes about two minutes per run. Before trusting
+anything it produces, it re-scores the PlantVillage test split from the
+checkpoint and **stops** unless that reproduces the accuracy and macro-F1 that
+`results/<run>.json` recorded at training time — if a checkpoint and its
+published result ever drift apart, this is what catches it.
+
+**`compare.py`** is the one to read carefully. It prints a **seed floor**: how
+far apart two runs of the *same* model land when only the seed changes. Any gap
+between two different models smaller than that floor is not a result. It then
+runs McNemar's paired test on every pair and says, for each, whether the
+difference clears the floor. Read the two together: McNemar is sensitive enough
+to call a mere seed change significant, which is exactly the mistake the floor
+prevents.
+
+**`figures.py`** writes `paper/figures/reliability`, `risk_coverage` and
+`uncertainty` as PNG and PDF. Include the PDFs in LaTeX.
+
+Re-run all three after every future phase, so each new model is judged the same
+way. `evaluate.py --runs <name>` scores one run instead of all of them.
+
+---
+
 ## Part E — Fill Table II's baseline rows
 
 ```powershell

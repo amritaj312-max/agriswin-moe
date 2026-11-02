@@ -81,11 +81,7 @@ def _safe_component(name, max_len=120):
 
 def _long_path(path):
     """Windows extended-length form, which lifts the 260-character limit."""
-    if os.name == "nt":
-        path = os.path.abspath(path)
-        if not path.startswith("\\\\?\\"):
-            return "\\\\?\\" + path
-    return path
+    return paths.long_path(path)
 
 
 def sanitized_checkout(name, dest):

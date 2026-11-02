@@ -53,6 +53,22 @@ def raw_dir():
     return os.path.join(data_root(), "raw")
 
 
+def long_path(path):
+    """Windows extended-length form, which lifts the 260-character path limit.
+
+    PlantDoc's filenames are scraped web page titles; three of them sit in
+    paths over 260 characters, and Windows then refuses to open them by name
+    even though os.listdir lists them. Prefixing the absolute path with \\?\
+    bypasses the limit. Everything that opens a dataset image goes through
+    here, so no loader silently skips those three.
+    """
+    if os.name == "nt":
+        path = os.path.abspath(path)
+        if not path.startswith("\\\\?\\"):
+            return "\\\\?\\" + path
+    return path
+
+
 def image_root(dataset="plantvillage"):
     """Directory holding the class subdirectories for a dataset."""
     roots = {
