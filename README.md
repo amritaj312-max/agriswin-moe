@@ -165,6 +165,24 @@ What protects a result:
   they stopped; Windows is kept awake while a run trains; a run whose losses turn
   non-finite stops instead of training on garbage.
 
+## Training on Colab
+
+Heavy training runs on Colab's L4 or A100 GPUs, through the same `train.py`,
+recipe and frozen splits as anywhere else. Open a notebook straight from GitHub:
+
+- [**train_on_colab.ipynb**](https://colab.research.google.com/github/amritaj312-max/agriswin-moe/blob/main/notebooks/train_on_colab.ipynb)
+  — runs a training queue; checkpoints live on Google Drive, so a disconnect
+  costs nothing.
+- [**evaluate_on_colab.ipynb**](https://colab.research.google.com/github/amritaj312-max/agriswin-moe/blob/main/notebooks/evaluate_on_colab.ipynb)
+  — scores Colab runs on PlantVillage and PlantDoc, compares every run and
+  redraws the figures.
+
+Before a Colab runtime trains anything, `verify_data.py` checks that every
+image is byte-for-byte the one the baselines were trained on (dataset downloads
+are pinned to exact upstream commits). Step-by-step setup, including the GitHub
+token that lets results push themselves: Part H of
+[docs/NEXT_STEPS.md](docs/NEXT_STEPS.md).
+
 ## Hardware
 
 Images are natively 256x256, and 256 is also the native resolution for
@@ -179,7 +197,8 @@ headroom. Full numbers in `ml_pipeline/configs/hardware.md`.
 ```
 ml_pipeline/
   src/
-    data/        classes.py, download.py, build_splits.py, dataset.py, plantdoc.py, check_env.py
+    data/        classes.py, download.py, build_splits.py, dataset.py, plantdoc.py,
+                 verify_data.py, check_env.py
     models/      classifier.py (backbone + MC-dropout head); ST-DAM, MoE  (Phase 3)
     training/    train.py, run_queue.py, restore_weights.py; distillation  (Phase 5)
     evaluation/  metrics.py, uncertainty.py, evaluate.py, compare.py, figures.py
@@ -187,11 +206,12 @@ ml_pipeline/
   configs/       recipe.yaml (shared), baselines/*.yaml (one per run), hardware.md
 data/
   raw/           downloaded datasets (git-ignored)
-  splits/        frozen split CSVs (committed)
+  splits/        frozen PlantVillage splits, PlantDoc evaluation set, image checksums (committed)
 checkpoints/     weights and logs per run (git-ignored)
 results/         metrics JSON per run (committed; dev_* ignored)
   eval/          cross-dataset and uncertainty metrics per run (committed)
-paper/           LaTeX source
+paper/           LaTeX source; figures/ from evaluation/figures.py
+notebooks/       Colab notebooks (train, evaluate) and their runtime helper
 docs/            design docs + action plan
 ```
 

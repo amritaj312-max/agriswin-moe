@@ -74,6 +74,22 @@ def run_name(argv):
     return sets.get("run_name") or cfg.get("run_name") or sets.get("model") or cfg.get("model")
 
 
+def with_sets(argv, extra):
+    """argv with `extra` KEY=VALUE items merged into its --set.
+
+    A second `--set` flag would not add to the first: argparse keeps only the
+    last, so `--set seed=1 run_name=x --set num_workers=8` would quietly train
+    seed 42 under the config's own name. The items are therefore inserted into
+    the existing --set, or a new one is added if the line has none.
+    """
+    if not extra:
+        return argv
+    if "--set" in argv:
+        i = argv.index("--set") + 1
+        return argv[:i] + list(extra) + argv[i:]
+    return argv + ["--set", *extra]
+
+
 def wait_for_mains(allow_battery):
     if allow_battery or on_mains_power() is not False:
         return
@@ -140,10 +156,14 @@ def main():
     parser.add_argument("--allow-battery", action="store_true",
                         help="do not wait for the charger (short debug queues)")
     parser.add_argument("--commit-trailer", default="", help="appended to each result's commit message")
+    parser.add_argument("--set-all", nargs="+", default=[], metavar="KEY=VALUE",
+                        help="added to every run's --set, e.g. num_workers=8 on a machine "
+                             "with more CPU cores")
     args = parser.parse_args()
 
     with open(args.queue, encoding="utf-8") as fh:
-        items = [shlex.split(line) for line in fh if line.strip() and not line.lstrip().startswith("#")]
+        items = [with_sets(shlex.split(line), args.set_all)
+                 for line in fh if line.strip() and not line.lstrip().startswith("#")]
 
     keep_awake()      # for the whole queue, including the gaps between runs
     if sys.platform == "win32":

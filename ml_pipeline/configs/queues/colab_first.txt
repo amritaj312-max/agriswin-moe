@@ -1,0 +1,16 @@
+# The first Colab queue. One train.py argument line per run; finished runs are
+# skipped and an interrupted one resumes, so after a disconnect run it again.
+#   notebooks/train_on_colab.ipynb runs this file.
+#
+# 1. EfficientNet-B0, seed 42: the same run as results/efficientnet_b0.json,
+#    on a different GPU. It must land inside the laptop's three-seed spread
+#    (test accuracy 99.75-99.79%). If it does, the GPU does not move the
+#    results and Colab runs may share a table with laptop runs. If it does not,
+#    stop and look before training anything else. The shortest run, so it also
+#    proves the whole Colab setup end to end before the long ones.
+# 2-3. Swin-V2-T, seeds 1 and 2. Phase 3's ablations are compared against
+#    plain Swin-V2-T, and a difference only counts if it clears that model's
+#    own seed floor -- which needs more than the one seed trained so far.
+--config ml_pipeline/configs/baselines/efficientnet_b0.yaml --set run_name=efficientnet_b0_colab
+--config ml_pipeline/configs/baselines/swinv2_tiny.yaml --set seed=1 run_name=swinv2_tiny_seed1
+--config ml_pipeline/configs/baselines/swinv2_tiny.yaml --set seed=2 run_name=swinv2_tiny_seed2

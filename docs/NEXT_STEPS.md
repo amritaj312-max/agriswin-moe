@@ -4,7 +4,7 @@ The hands-on guide: what to open, what to type, what you should see, and what to
 do when something looks wrong. For *why* each step exists, see
 [ACTION_PLAN.md](ACTION_PLAN.md).
 
-**Where you are (31 Oct 2026):** the baselines (A–D) are trained and checked,
+**Where you are (2 Nov 2026):** the baselines (A–D) are trained and checked,
 scored on identical images with one recipe. These are Table II's baseline rows
 (Part E) — copy them in once the paper skeleton exists:
 
@@ -38,87 +38,69 @@ leaf-spot pair (Swin-V2-T makes 3 mistakes there, MobileViT-S and
 EfficientNet-B0 7–9 — Swin-V2-T's whole lead comes from this pair), PlantDoc,
 and calibration.
 
-**A scratch probe on PlantDoc says PlantDoc accuracy cannot rank them
-either**, and this shapes how the harness in step 3 has to be built. Scoring
-the five finished checkpoints on 2,586 PlantDoc field images, zero-shot,
-gives 21–26% — the domain-shift collapse the literature reports (paper [02]:
-98.88% → 13.10%), and no module will repair it. Three findings matter for the
-experiment design:
+**The evaluation harness (Part E2) shows PlantDoc accuracy cannot rank them
+either.** On 2,551 field images the models never saw, accuracy collapses to
+21–25% — the domain-shift collapse the literature reports (paper [02]: 98.88%
+→ 13.10%), and no module will repair it. In `compare.py`'s terms:
 
-- **Changing only the seed moves PlantDoc accuracy by 4.2 points** (three
-  EfficientNet-B0 seeds: 21.4%, 22.9%, 25.6%), which is larger than any gap
-  between *models*. So a single-seed PlantDoc number ranks seeds, not
-  architectures, and a McNemar test between two single runs reports
-  significance for a seed change alone. Every PlantDoc claim needs either
-  several seeds per configuration or seed-matched pairs.
-- **Swin-V2-T's PlantVillage lead does not transfer.** It is last but one on
-  PlantDoc (21.5%, against MobileViT-S's 24.3%), so "best backbone" has to be
-  said per dataset.
-- **Calibration is where the models genuinely separate.** On PlantDoc,
-  Swin-V2-T is 86% confident while 22% correct (ECE 64%); EfficientNet-B0 and
-  MobileViT-S sit at 76–78% confident (ECE 50–57%). A 14-point ECE gap dwarfs
-  anything accuracy shows, and being confidently wrong under shift is exactly
-  what Novelty 3's abstention is for.
+- **No accuracy gap clears the seed floor.** Changing only the seed moves
+  EfficientNet-B0 by 4.2 points (21.3%, 22.9%, 25.5%), more than any gap
+  between models, so a single-seed PlantDoc accuracy ranks seeds, not
+  architectures. Phase 3 needs several seeds per configuration.
+- **Calibration does separate them.** Under shift Swin-V2-T is far more
+  overconfident: ECE 64.6% against EfficientNet-B0's 53.8 ± 3.1%, a gap well
+  beyond the seed floor. Being confidently wrong is exactly what Novelty 3's
+  abstention is for.
+- **So does the corn pair.** Swin-V2-T makes 40 Gray Leaf Spot / Leaf Blight
+  mistakes against EfficientNet-B0's 63–74: its PlantVillage advantage on that
+  pair survives on field images.
+- **Head-only MC-dropout gives almost no epistemic uncertainty** (about 0.02
+  nats): the abstention signal comes from the softmax, not from the passes
+  disagreeing. That bears on how Novelty 3 is built, in Phase 4.
 
-Those numbers come from a throwaway script, not from the pipeline — they are
-a design input, not results, and nothing from them belongs in the paper until
-step 3's harness produces them properly.
+PlantDoc itself ships 9 images under two contradictory labels and 20 twice
+under one label. `plantdoc.py` leaves those out and freezes the other 2,551 by
+content hash in `data/splits/plantdoc_eval.csv`, so the laptop and Colab score
+exactly the same images whatever their files are called.
 
 ---
 
 ## Do these next, in this order
 
-Steps 1 and 2 are yours and take six minutes between them. Everything after
-that starts by asking Claude.
+Training now moves to **Google Colab** (an L4 or A100), where a run that took
+this laptop seven hours takes one or two. The laptop stays the place where code
+is written and checked. **You** marks the steps that need you; for every other
+one, ask Claude.
 
-**1. ~~Get the work off this laptop.~~ Done (31 Oct – 2 Nov).** Everything
-committed is backed up to the repository
+**1. ~~Back up to GitHub.~~ Done.** Code and results are in
 [github.com/amritaj312-max/agriswin-moe](https://github.com/amritaj312-max/agriswin-moe),
-and the training queue now pushes each result the moment it commits it, with
-no sign-in prompt. The five trained baselines' weights are backed up too, as
-the release
-[Phase 2 baseline weights](https://github.com/amritaj312-max/agriswin-moe/releases/tag/weights-phase2),
-every part checked byte for byte against the laptop's copy. Only the images
-are left out, and `download.py` fetches those again. **Weights trained from now
-on are not backed up automatically** — the queue pushes results, not
-checkpoints — so after each phase, ask Claude to add its weights as a release
-the same way.
+and the baselines' weights are the release
+[weights-phase2](https://github.com/amritaj312-max/agriswin-moe/releases/tag/weights-phase2).
+Weights trained on Colab are kept on your Google Drive.
 
-**2. Stop the lid from pausing a run (1 min).** This is what cost most of the
-2 h 45 min. In PowerShell:
+**2. ~~Evaluation harness.~~ Done** — Part E2, findings above.
 
-```powershell
-powercfg /setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
-powercfg /setactive SCHEME_CURRENT
-```
+**3. You, once (about 15 min): set up Colab.** Part H1 and H2: Colab Pro or
+pay-as-you-go compute units (the L4 and A100 need one of them), and a GitHub
+token saved as a Colab secret, so each result pushes itself when it finishes.
 
-Now closing the lid **while plugged in** no longer sleeps the laptop; on
-battery it still does, which protects the battery. Keep the lid open anyway —
-this is insurance against knocking it shut, not permission to close it, because
-a closed lid traps heat and a hot GPU throttles. To undo it, run the same two
-lines with `1` in place of the final `0`.
+**4. You: the first Colab queue (a few hours of GPU, unattended).** Part H3:
+open `train_on_colab.ipynb`, choose the L4, *Run all*. It retrains
+EfficientNet-B0 seed 42 first, which must land inside the laptop's
+99.75–99.79% — the proof that Colab results and laptop results may share a
+table — and then Swin-V2-T seeds 1 and 2, which give the ablation control a
+seed floor of its own.
 
-**3. Ask Claude for the evaluation harness (~1 h GPU, no training).** This
-comes *before* ST-DAM, which is a change from the original plan, and the
-baselines are the reason: they land within five test images of each other, so
-PlantVillage accuracy cannot tell you whether ST-DAM helped. The harness —
-PlantDoc cross-dataset accuracy, MC-dropout uncertainty, reliability diagram,
-risk-coverage curve — is what will be able to. It needs no retraining, runs on
-the three models already trained, and fills three empty columns of Table II.
-Built after ST-DAM instead, it would leave those four runs unjudgeable. The
-probe described above also means it must report **calibration and abstention,
-seed-matched**, rather than one PlantDoc accuracy per model. Three PlantDoc
-images (of 2,589) still have paths too long for Windows to open, and it should
-either repair or record them.
+**5. You: evaluate them (minutes).** Part H6: `evaluate_on_colab.ipynb`,
+*Run all*.
 
-**4. Ask Claude for the ST-DAM module (no GPU).** Code, configs and checks.
-Expect to be asked one question first: how much GPU time to spend on the
-ablation, since four rows at ~7.5 h each is four nights on this laptop.
+**6. Claude: the ST-DAM module (no GPU).** Code, configs, checks and an
+ablation queue file. Expect three design questions first.
 
-**5. Run the ST-DAM ablation (4 nights).** The queue runner handles it
-unattended, one run per night, committing each result as it lands.
+**7. You: the ST-DAM ablation on Colab.** The same training notebook with the
+ablation queue, several seeds per configuration, as the seed floor demands.
 
-**6. Then the MoE head, and the full teacher.** Part F has the rest.
+**8. Then the MoE head and the full teacher.** Part F has the rest.
 
 ---
 
@@ -211,10 +193,19 @@ and the screen turning off is fine. The rest is up to you. Do these once:
 4. **Keep the lid open**, on a hard flat surface — not a bed or a lap. Closing
    the lid puts the laptop to sleep by default, which suspends the run until
    someone opens it again; blocked vents also make the GPU run hotter than the
-   75–78 °C it measured under load, which slows it down. The two `powercfg`
-   lines in *Do these next* stop a closed lid sleeping the machine while it is
-   plugged in — worth running, because over four days of baselines a closed lid
-   and a pulled charger cost 2 h 45 min of waiting.
+   75–78 °C it measured under load, which slows it down. Over four days of
+   baselines, a closed lid and a pulled charger cost 2 h 45 min of waiting.
+   These two lines stop a closed lid sleeping the laptop **while it is plugged
+   in** (on battery it still sleeps, which protects the battery):
+
+   ```powershell
+   powercfg /setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
+   powercfg /setactive SCHEME_CURRENT
+   ```
+
+   Keep the lid open anyway: this is insurance against knocking it shut, not
+   permission to close it. To undo it, run the same lines with `1` in place of
+   the final `0`.
 
 If a run gets interrupted anyway, see Part G: you lose one epoch at most.
 
@@ -577,155 +568,132 @@ send it later with `git push`.
 
 ---
 
-## Part H — Training on another, faster machine
+## Part H — Training on Colab (L4 or A100)
 
-**Copying the whole folder is not enough, and mostly wasted.** Of its 6.5 GB,
-4.75 GB is `.venv`, which works only on this laptop: it points at
-`C:\Python314`. The new machine needs its own Python environment and, often, a
-different PyTorch build for its GPU. Everything else travels.
+Colab lends you a GPU several times faster than this laptop's, a few hours at a
+time. The two notebooks in `notebooks/` do everything except what has to be
+yours: choosing the GPU, letting Colab use your Google Drive, and making the
+GitHub token. A Colab run goes through the same `train.py`, recipe and frozen
+splits as a laptop run, so its result can share a table with them — and the
+first queue proves it.
 
-| What | Size | On the new machine |
-|---|---|---|
-| Code, configs, splits, git history | under 10 MB | **move it** — H1 |
-| `data\raw\` (the images) | 1.7 GB | **move it**, as one archive — H2 |
-| `.venv\` | 4.75 GB | **never copy it** — rebuild it, H3 |
-| `checkpoints\` | grows per run | only to finish a run that started here |
-| Downloaded pretrained weights | 0.15 GB | only if the machine has no internet — H3 |
+### H1. What you need (once)
 
-**Decide where to train before the first paper run.** Runs from two machines are
-still comparable — same recipe, same images, and every result records its GPU —
-but one machine for every run in a table is cleanest. No paper run exists yet,
-so now is the time to choose.
+- **Colab Pro, or pay-as-you-go compute units**
+  ([colab.research.google.com/signup](https://colab.research.google.com/signup)).
+  The free tier offers at most a T4; the L4 and A100 need paid compute, charged
+  in compute units per hour while connected. The *Resources* panel shows the
+  rate.
+- **About 2 GB free on Google Drive** for the image cache, plus room for
+  checkpoints: about 60 MB per EfficientNet-B0 run and 420 MB per Swin-V2-T run.
+  A finished run only needs its `best.pt`; deleting a finished run's `last.pt`
+  (kept only for resuming) frees about three quarters of its space.
+- **A GitHub token saved as a Colab secret** — H2. Optional, but without it
+  results stay on Drive and reach the repository only by hand.
 
-### H1. Get the code there
+### H2. Make the GitHub token (once, about 5 minutes)
 
-**Best: through GitHub.** The code, splits and results are in the repository
-`amritaj312-max/agriswin-moe`. On the new machine:
+The token lets Colab push results to this one repository and do nothing else.
+You make it and store it; it never appears in a notebook, a file or any output.
+
+1. On GitHub: **Settings → Developer settings → Personal access tokens →
+   Fine-grained tokens → Generate new token**
+   ([direct link](https://github.com/settings/personal-access-tokens/new)).
+2. **Token name** `colab-agriswin`, **Expiration** 90 days.
+3. **Repository access:** *Only select repositories* → `agriswin-moe`.
+4. **Permissions → Repository permissions → Contents:** *Read and write*.
+   Leave everything else as it is.
+5. **Generate token** and copy it — GitHub shows it only once.
+6. In Colab, with any notebook open, click the **key icon** in the left sidebar
+   (*Secrets*) → **Add new secret** → Name `GITHUB_TOKEN`, Value: paste the
+   token → switch on **Notebook access**.
+
+Secrets belong to your Google account, so this covers every notebook. When the
+token expires, make a new one and replace the secret's value.
+
+### H3. Train
+
+1. Open the training notebook straight from GitHub:
+   **[train_on_colab.ipynb](https://colab.research.google.com/github/amritaj312-max/agriswin-moe/blob/main/notebooks/train_on_colab.ipynb)**.
+2. **Runtime → Change runtime type → L4 GPU** (or A100 GPU) → **Save**.
+3. **Runtime → Run all.** The first time, Colab asks to connect to Google
+   Drive: choose your account and **Allow**.
+4. **Keep the tab open** until the queue finishes. Colab may disconnect a
+   runtime whose tab is closed or idle; nothing is lost if it does (H5), but
+   the GPU waits until you come back.
+
+What you should see, cell by cell:
+
+| Cell | Expect |
+|---|---|
+| 1 | one line naming the GPU, such as `NVIDIA L4, 23034 MiB` |
+| 3 | the latest commit on GitHub |
+| 4 | the first time, a download of a few minutes. Then `identical to the reference` for train, val and test, `all 2551 images present by content`, and a summary box whose `results` line says *pushed to GitHub* |
+| 6 | the familiar `train.py` header and progress lines, with several times the laptop's img/s |
+| 7 | the results table, ending in `identical images` and `same recipe` |
+
+**The first queue is a test, not just a run.** EfficientNet-B0 seed 42 was
+already trained on the laptop. Retrained on Colab, it must land inside the
+laptop's three-seed range, **99.75–99.79%** test accuracy. If it does, the GPU
+does not move the results, and Colab and laptop rows may share a table. If it
+does not, stop and tell Claude before anything else trains.
+
+### H4. Which GPU
+
+Start on the **L4**. It costs much less per hour than the A100 and has ample
+memory for batch 32. Batch size stays at 32 on every GPU — it is part of the
+recipe, so raising it would make every new row incomparable with the baselines
+(`train.py` refuses to) — and at batch 32 the A100's extra power is partly
+idle. The `img/s` in the progress lines is the real speed: to compare, run a
+queue on each and divide by each GPU's compute-unit rate.
+
+### H5. If the runtime disconnects
+
+Open the notebook and **Run all** again. Checkpoints, the image cache and a copy
+of every finished result live on your Drive, so finished runs are skipped, an
+interrupted run resumes from its last finished epoch, and any result the last
+session finished but did not push is pushed now.
+
+### H6. Evaluate Colab runs
+
+**[evaluate_on_colab.ipynb](https://colab.research.google.com/github/amritaj312-max/agriswin-moe/blob/main/notebooks/evaluate_on_colab.ipynb)**
+→ any GPU → **Run all**. It scores every run whose weights are on your Drive
+and has no evaluation yet, compares all runs, laptop and Colab together,
+redraws the figures, and pushes the lot. Then, on the laptop:
 
 ```powershell
-git clone https://github.com/amritaj312-max/agriswin-moe.git
-cd agriswin-moe
+git pull
 ```
 
-While the repository is public, cloning needs no sign-in; if it is made private
-again, the first `git clone` opens a sign-in to the `amritaj312-max` account.
-Pushing results back always needs that sign-in.
+### H7. Another machine instead (a lab server, Kaggle)
 
-**Or copy the folder** — leaving out `.venv` and `checkpoints`.
-
-GitHub's git history holds everything except what `.gitignore` deliberately
-leaves out: the images in `data/raw/` (H2 moves them, or `download.py` fetches
-them again) and the trained weights in `checkpoints/`. A new machine does not
-need old weights to train new runs, but Phases 5 and 6 evaluate and distil the
-models already trained here. The Phase 2 weights are in the release
-[weights-phase2](https://github.com/amritaj312-max/agriswin-moe/releases/tag/weights-phase2):
-download `SHA256SUMS.txt` and the parts of the runs you need into one folder,
-then run
-
-```powershell
-.venv/Scripts/python.exe ml_pipeline/src/training/restore_weights.py <that folder>
-```
-
-which joins the parts, checks each file's checksum and puts it at
-`checkpoints/<run>/best.pt`.
-
-### H2. Move the images as one file
-
-57,000 small files copy slowly; one archive copies quickly. In PowerShell, in the
-project folder on this laptop:
-
-```powershell
-tar -cf agriswin-data.tar -C data raw
-```
-
-That writes `agriswin-data.tar` — 1.77 GB, about a minute, and git ignores it.
-Copy it into the project folder on the new machine (USB drive, Google Drive,
-`scp`), and unpack it there:
+The same steps by hand. Clone the repository, and build a Python environment as
+in the README's *Setup* (on Kaggle, keep its PyTorch and install only
+`timm==1.0.30`). Fetch the images — `download.py` checks out the same pinned
+commits as everywhere else:
 
 ```bash
-tar -xf agriswin-data.tar -C data
+python ml_pipeline/src/data/download.py --dataset all
 ```
 
-Then delete the `.tar` on both machines. Downloading the data afresh with
-`download.py` also works, but on Linux PlantDoc's filenames then come out
-unsanitised — different from this laptop's. Copying keeps every machine
-byte-identical.
-
-The images can also live outside the project, for example on Kaggle or Colab:
-set the environment variable `AGRISWIN_DATA_ROOT` to the folder that contains
-`raw/`.
-
-### H3. Build the Python environment there
-
-On **Linux**, in the project folder:
+Then check them. This must end with `OK: every image is byte-for-byte the one
+the results were made on` before anything trains there:
 
 ```bash
-python3 -m venv .venv
+python ml_pipeline/src/data/verify_data.py
 ```
+
+Train with the queue runner, adding `--set-all num_workers=8` (about one per CPU
+core) so a fast GPU is not kept waiting for images, and never change
+`batch_size`. Commit and push each `results/<run>.json`, then `git pull` on the
+laptop. To use the baselines' weights there, download `SHA256SUMS.txt` and the
+parts you need from the release
+[weights-phase2](https://github.com/amritaj312-max/agriswin-moe/releases/tag/weights-phase2)
+into one folder, and run:
 
 ```bash
-.venv/bin/pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+python ml_pipeline/src/training/restore_weights.py <that folder>
 ```
-
-```bash
-.venv/bin/pip install -r ml_pipeline/requirements.txt
-```
-
-On **Windows**, follow Setup in the README.
-
-- **The `cu128` part must suit that GPU** — check
-  [pytorch.org/get-started/locally](https://pytorch.org/get-started/locally/).
-  RTX 50-series cards need cu128 or newer, and very old cards (Kaggle's P100,
-  for one) may be missing from the newest builds. A wrong choice cannot slip
-  through: `check_env.py` in H4 runs a real calculation on the GPU, and fails
-  at once if the build does not support it.
-- **On Kaggle or Colab**, skip the PyTorch line and use the PyTorch already
-  installed, which matches their drivers. Run only the `requirements.txt` line.
-- **No internet on the new machine** (some university clusters)? Copy the folder
-  `C:\Users\AMRITA JENA\.cache\huggingface\hub` to `~/.cache/huggingface/hub`
-  there, or the first run cannot download its starting weights.
-
-### H4. Check it before training
-
-```bash
-.venv/bin/python ml_pipeline/src/data/check_env.py
-```
-
-```bash
-.venv/bin/python ml_pipeline/src/data/dataset.py
-```
-
-```bash
-git status
-```
-
-Expect what A2 and A4 show here: `Environment is ready.`, `OK: dataset and
-loaders work.` and a clean tree. Once training starts, its header must name the
-same starting weights as on this laptop — for EfficientNet-B0,
-`weights timm/efficientnet_b0.ra_in1k`.
-
-### H5. Train — the same commands, with three differences
-
-1. On Linux the Python is `.venv/bin/python`, not `.venv/Scripts/python.exe`.
-2. **Use more data workers** if the machine has more CPU cores, or a fast GPU
-   will sit waiting for images: add `--set num_workers=8` (roughly the number of
-   CPU cores minus two). Paper runs may change this; it does not change results.
-3. **Keep `batch_size` at 32.** A bigger GPU tempts you to raise it, but batch
-   size is part of the recipe: change it, and every run is redone with the new
-   value — and 32 is the most this laptop can hold. A faster GPU is faster at
-   batch 32 too. (`train.py` refuses `--set batch_size=...` on a paper run.)
-
-Kaggle and Colab sessions end after roughly 9–12 hours: split Swin-V2-T with
-`--stop-after` and `--resume`, and keep `checkpoints/` on storage that outlives
-the session.
-
-### H6. Bring the results back
-
-Commit `results/<run>.json` on the new machine and push it; on the laptop, run
-`git pull`. If later phases will run on the laptop, also bring back
-`checkpoints/<run>/best.pt` — the trained weights every later phase starts from
-— either by copying it, or by adding it to a GitHub release and restoring it
-with `restore_weights.py` as in H1.
 
 ---
 

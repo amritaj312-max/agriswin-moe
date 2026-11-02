@@ -501,8 +501,12 @@ def main():
                  "confusion_matrix": test["confusion_matrix"]},
     }
     os.makedirs(RESULTS_DIR, exist_ok=True)
-    with open(results_path, "w", encoding="utf-8") as fh:
-        json.dump(results, fh, indent=2)
+    # A second copy beside the weights. On Colab, results/ is inside a clone
+    # that vanishes with the runtime while checkpoints/ lives on Google Drive,
+    # so this copy is what survives a disconnect before the result is pushed.
+    for path in (results_path, os.path.join(run_dir, "result.json")):
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(results, fh, indent=2)
     with open(finished_marker, "w", encoding="utf-8") as fh:
         fh.write(results_path + "\n")
 
