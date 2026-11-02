@@ -170,7 +170,34 @@ def main():
         import ctypes
         ctypes.windll.kernel32.SetConsoleTitleW("AgriSwin training queue -- closing this window stops it")
     log(f"{args.queue}: {len(items)} run(s), pid {os.getpid()}")
+    code = run_items(items, args)
+    push_pending()
+    return code
 
+
+def push_pending():
+    """Push result commits that never reached the remote.
+
+    accept() pushes each result as it commits it, but a push that fails then
+    (no network, no permission yet) is never retried by accept(): on the next
+    pass the result is already committed, so it returns early. Without this,
+    such a commit would wait for someone to notice it -- and on Colab, where
+    the clone dies with the runtime, it could be lost with it.
+    """
+    if git("remote", "get-url", "origin").returncode != 0:
+        return
+    ahead = git("rev-list", "--count", "@{upstream}..HEAD")
+    if ahead.returncode != 0 or not int(ahead.stdout.strip() or 0):
+        return
+    env = dict(os.environ, GIT_TERMINAL_PROMPT="0", GCM_INTERACTIVE="never")
+    pushed = git("push", env=env)
+    log(f"pushed {ahead.stdout.strip()} pending commit(s)" if pushed.returncode == 0 else
+        f"{ahead.stdout.strip()} commit(s) still unpushed (safe locally): "
+        f"{pushed.stderr.strip()[:300]}")
+
+
+def run_items(items, args):
+    """Train and accept every queued run. Returns the process exit code."""
     for argv in items:
         run = run_name(argv)
         if os.path.isfile(os.path.join(CHECKPOINT_DIR, run, "FINISHED")):

@@ -46,8 +46,17 @@ IMAGE_DIRS = ["raw/plantvillage/raw/color", "raw/plantdoc/train", "raw/plantdoc/
 
 
 def sh(cmd, check=True):
-    """Run a shell command in the repo, streaming its output."""
-    code = subprocess.run(cmd, shell=True, cwd=REPO).returncode
+    """Run a shell command in the repo, showing its output in the notebook.
+
+    A plain subprocess writes to the runtime's own log, not to the cell, so
+    the output is read back and printed line by line -- otherwise the
+    image check's verdict, the evidence that matters, would never be seen.
+    """
+    proc = subprocess.Popen(cmd, shell=True, cwd=REPO, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, text=True, errors="replace")
+    for line in proc.stdout:
+        print(line, end="", flush=True)
+    code = proc.wait()
     if check and code != 0:
         raise RuntimeError(f"command failed ({code}): {cmd}")
     return code
@@ -138,9 +147,9 @@ def link_checkpoints():
 def configure_git():
     """Sign commits; enable pushing if a GITHUB_TOKEN secret is set.
 
-    The token never touches disk or output: it is read from Colab's secret
-    store into this process's environment, and a credential helper hands it
-    to git from there.
+    Returns "ok", "no secret" or "cannot push". The token never touches disk
+    or output: it is read from Colab's secret store into this process's
+    environment, and a credential helper hands it to git from there.
     """
     git("config", "--global", "user.name", GIT_NAME)
     git("config", "--global", "user.email", GIT_EMAIL)
@@ -150,7 +159,7 @@ def configure_git():
     except Exception:                           # noqa: BLE001 -- no secret, or no notebook access
         token = None
     if not token:
-        return False
+        return "no secret"
     os.environ[TOKEN_SECRET] = token
     helper = ('!f() { test "$1" = get && echo username=x-access-token && '
               f'echo "password=${TOKEN_SECRET}"; }}; f')
@@ -159,11 +168,30 @@ def configure_git():
     # authenticates for writing without changing anything.
     check = git("push", "--dry-run")
     if check.returncode != 0:
-        print(f"The {TOKEN_SECRET} secret cannot push ({check.stderr.strip()[:200]}); results "
-              f"will be kept on Drive instead. Check the token's repository and its "
-              f"'Contents: Read and write' permission.")
-        return False
-    return True
+        print(f"\nThe {TOKEN_SECRET} secret was found but GitHub refused it for pushing:\n"
+              f"  {check.stderr.strip()[:300]}\n"
+              f"A 403 'Permission ... denied' means the token works but may not write here. On "
+              f"GitHub, edit the token (Settings > Developer settings > Fine-grained tokens): "
+              f"Repository access must be 'Only select repositories' with agriswin-moe chosen "
+              f"(the default, 'Public repositories', is read-only), and Repository permissions "
+              f"> Contents must be 'Read and write'. Editing keeps the same token, so the secret "
+              f"needs no change; run this cell again afterwards.\n")
+        return "cannot push"
+    return "ok"
+
+
+def push_pending():
+    """Push commits made here that never reached GitHub -- results a queue
+    committed while pushing was not yet possible. Returns how many."""
+    ahead = git("rev-list", "--count", "@{upstream}..HEAD")
+    count = int(ahead.stdout.strip() or 0) if ahead.returncode == 0 else 0
+    if count:
+        git("pull", "--rebase")                 # onto anything pushed meanwhile
+        pushed = git("push")
+        if pushed.returncode != 0:
+            print(f"Could not push {count} pending commit(s): {pushed.stderr.strip()[:200]}")
+            return 0
+    return count
 
 
 def acceptable(result_path):
@@ -236,7 +264,11 @@ def setup():
     pin = install()
     source = prepare_data()
     checkpoints = link_checkpoints()
-    can_push = configure_git()
+    token = configure_git()
+    can_push = token == "ok"
+    pending = push_pending() if can_push else 0
+    if pending:
+        print(f"Pushed {pending} result commit(s) an earlier queue could not push.")
 
     recovered = recover_results()
     good = [r for r in recovered if acceptable(f"{REPO}/results/{r}.json")]
@@ -252,8 +284,11 @@ def setup():
     print(f"  packages     {pin}")
     print(f"  images       verified, from {source}")
     print(f"  checkpoints  {checkpoints}")
-    print(f"  results      " + ("committed and pushed to GitHub as each run finishes" if can_push
-                               else f"kept on Drive (no {TOKEN_SECRET} secret, so not pushed)"))
+    print(f"  results      " + {
+        "ok": "committed and pushed to GitHub as each run finishes",
+        "no secret": f"kept on Drive (no {TOKEN_SECRET} secret, so not pushed)",
+        "cannot push": f"kept on Drive ({TOKEN_SECRET} cannot push yet: see the note above)",
+    }[token])
     if recovered:
         print(f"  recovered    {', '.join(recovered)}")
     print("=" * 70)

@@ -86,10 +86,11 @@ token saved as a Colab secret, so each result pushes itself when it finishes.
 
 **4. You: the first Colab queue (a few hours of GPU, unattended).** Part H3:
 open `train_on_colab.ipynb`, choose the L4, *Run all*. It retrains
-EfficientNet-B0 seed 42 first, which must land inside the laptop's
-99.75–99.79% — the proof that Colab results and laptop results may share a
-table — and then Swin-V2-T seeds 1 and 2, which give the ablation control a
-seed floor of its own.
+EfficientNet-B0 seed 42 as an end-to-end check, then Swin-V2-T seeds 1 and 2,
+which give the ablation control a seed floor of its own. **Running (2 Nov):**
+EfficientNet-B0 99.67% and Swin-V2-T seed 1 99.80% are done; seed 2 is
+training. Their pushes failed on the token's permissions (H2 says how to fix
+it) but the results are safe on Drive.
 
 **5. You: evaluate them (minutes).** Part H6: `evaluate_on_colab.ipynb`,
 *Run all*.
@@ -600,7 +601,9 @@ You make it and store it; it never appears in a notebook, a file or any output.
    Fine-grained tokens → Generate new token**
    ([direct link](https://github.com/settings/personal-access-tokens/new)).
 2. **Token name** `colab-agriswin`, **Expiration** 90 days.
-3. **Repository access:** *Only select repositories* → `agriswin-moe`.
+3. **Repository access:** *Only select repositories* → `agriswin-moe`. **Do
+   not leave the default, *Public repositories*:** it is read-only, and every
+   push is then refused with `403 ... Permission ... denied`.
 4. **Permissions → Repository permissions → Contents:** *Read and write*.
    Leave everything else as it is.
 5. **Generate token** and copy it — GitHub shows it only once.
@@ -610,6 +613,13 @@ You make it and store it; it never appears in a notebook, a file or any output.
 
 Secrets belong to your Google account, so this covers every notebook. When the
 token expires, make a new one and replace the secret's value.
+
+**If cell 4 says the secret "cannot push" (a 403):** the token is fine but may
+not write here — almost always step 3 or 4. On GitHub open **Settings →
+Developer settings → Fine-grained tokens → colab-agriswin**, fix *Repository
+access* and *Contents*, and save. Editing keeps the same token, so the Colab
+secret needs no change. Results trained meanwhile are safe on Drive; the next
+time cell 4 runs it pushes them.
 
 ### H3. Train
 
@@ -632,11 +642,19 @@ What you should see, cell by cell:
 | 6 | the familiar `train.py` header and progress lines, with several times the laptop's img/s |
 | 7 | the results table, ending in `identical images` and `same recipe` |
 
-**The first queue is a test, not just a run.** EfficientNet-B0 seed 42 was
-already trained on the laptop. Retrained on Colab, it must land inside the
-laptop's three-seed range, **99.75–99.79%** test accuracy. If it does, the GPU
-does not move the results, and Colab and laptop rows may share a table. If it
-does not, stop and tell Claude before anything else trains.
+**Why each table is trained on one machine.** EfficientNet-B0 seed 42, already
+trained on the laptop (99.75–99.79% over three seeds), was retrained first as
+an end-to-end check, and scored **99.67%** on the L4 — about 27 test mistakes
+against 17–20. That does *not* show the GPU changes results: "seed 42" on
+another machine is effectively a new random draw (a different GPU, PyTorch
+build and number of loader workers change the augmentation stream), its
+checkpoint was chosen at a one-epoch spike in validation before early stopping
+cut the low-learning-rate phase short, and a fourth run falls outside the range
+of three **half the time** even when nothing differs. But one run cannot prove
+the machines equivalent either. So comparisons stay within a machine: Table II
+is the laptop baselines, and every row of the Phase 3 ablation table, its
+Swin-V2-T control included, is trained on Colab with the same seeds. Swin-V2-T
+seed 1 on Colab, 99.80%, sits within one image of the laptop's 99.82%.
 
 ### H4. Which GPU
 

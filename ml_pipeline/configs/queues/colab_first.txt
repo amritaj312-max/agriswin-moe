@@ -2,12 +2,12 @@
 # skipped and an interrupted one resumes, so after a disconnect run it again.
 #   notebooks/train_on_colab.ipynb runs this file.
 #
-# 1. EfficientNet-B0, seed 42: the same run as results/efficientnet_b0.json,
-#    on a different GPU. It must land inside the laptop's three-seed spread
-#    (test accuracy 99.75-99.79%). If it does, the GPU does not move the
-#    results and Colab runs may share a table with laptop runs. If it does not,
-#    stop and look before training anything else. The shortest run, so it also
-#    proves the whole Colab setup end to end before the long ones.
+# 1. EfficientNet-B0, seed 42: the shortest run, so it proves the whole Colab
+#    setup end to end before the long ones. It is the same configuration as
+#    results/efficientnet_b0.json, but on another machine "seed 42" is in
+#    effect a new random draw, so it cannot show the two machines equivalent
+#    (it scored 99.67% against the laptop's 99.75-99.79%; see NEXT_STEPS H3).
+#    That is why each comparison table is trained on a single machine.
 # 2-3. Swin-V2-T, seeds 1 and 2. Phase 3's ablations are compared against
 #    plain Swin-V2-T, and a difference only counts if it clears that model's
 #    own seed floor -- which needs more than the one seed trained so far.
