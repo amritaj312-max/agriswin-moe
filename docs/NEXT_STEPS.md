@@ -594,18 +594,31 @@ first queue proves it.
 
 ### H2. Make the GitHub token (once, about 5 minutes)
 
-The token lets Colab push results to this one repository and do nothing else.
-You make it and store it; it never appears in a notebook, a file or any output.
+The token lets Colab push to this one repository and do nothing else. You make
+it and store it; it never appears in a notebook, a file or any output.
+
+**Two separate settings have to be right**, and a token missing either is
+accepted by GitHub but refused on every push with `403 ... Permission ...
+denied`: *which* repository it may touch, and *what* it may do there. The second
+is the one that is easy to miss, because a new token starts with no permissions
+at all.
 
 1. On GitHub: **Settings → Developer settings → Personal access tokens →
    Fine-grained tokens → Generate new token**
    ([direct link](https://github.com/settings/personal-access-tokens/new)).
-2. **Token name** `colab-agriswin`, **Expiration** 90 days.
-3. **Repository access:** *Only select repositories* → `agriswin-moe`. **Do
-   not leave the default, *Public repositories*:** it is read-only, and every
-   push is then refused with `403 ... Permission ... denied`.
-4. **Permissions → Repository permissions → Contents:** *Read and write*.
-   Leave everything else as it is.
+2. **Token name** anything, say `colab-agriswin`; **Expiration** 90 days.
+3. **Repository access:** choose *Only select repositories*, then **Select
+   repositories** → `agriswin-moe`. Not the default *Public repositories*,
+   which is read-only.
+4. **Permissions → Repository permissions → Add permissions.** A search box
+   opens. Type `contents`, tick **Contents**, then close the list (press Esc or
+   click outside it). **Contents** now appears in the list with its own access
+   dropdown: set it to **Read and write**. GitHub adds *Metadata: Read-only*
+   by itself, which is required and cannot be removed.
+
+   The *Permissions* heading counts what you have granted. It must not say
+   **Repositories 0** — that is a token that can read the repository and
+   nothing more.
 5. **Generate token** and copy it — GitHub shows it only once.
 6. In Colab, with any notebook open, click the **key icon** in the left sidebar
    (*Secrets*) → **Add new secret** → Name `GITHUB_TOKEN`, Value: paste the
@@ -614,12 +627,13 @@ You make it and store it; it never appears in a notebook, a file or any output.
 Secrets belong to your Google account, so this covers every notebook. When the
 token expires, make a new one and replace the secret's value.
 
-**If cell 4 says the secret "cannot push" (a 403):** the token is fine but may
-not write here — almost always step 3 or 4. On GitHub open **Settings →
-Developer settings → Fine-grained tokens → colab-agriswin**, fix *Repository
-access* and *Contents*, and save. Editing keeps the same token, so the Colab
-secret needs no change. Results trained meanwhile are safe on Drive; the next
-time cell 4 runs it pushes them.
+**If cell 4 says the secret "cannot push" (a 403):** the token itself is valid,
+so do not make a new one — open it (**Fine-grained tokens** → its name) and
+check steps 3 and 4, *Permissions* above all. Set what is missing and press the
+green **Update** button beside *Access on* your account name; GitHub may ask you
+to confirm by email. Editing keeps the same token, so the Colab secret needs no
+change. Results trained meanwhile are safe on Drive, and the next time cell 4
+runs it pushes everything waiting.
 
 ### H3. Train
 
