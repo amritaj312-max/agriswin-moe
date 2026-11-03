@@ -69,13 +69,38 @@ either.** On 2,551 field images the models never saw, accuracy collapses to
   EfficientNet-B0 by 4.2 points (21.3%, 22.9%, 25.5%), more than any gap
   between models, so a single-seed PlantDoc accuracy ranks seeds, not
   architectures. Phase 3 needs several seeds per configuration.
+
+- **But the seed floor is a property of the model, not of PlantDoc.** With all
+  three Swin-V2-T control seeds now scored, Swin-V2-T is far steadier under
+  domain shift than EfficientNet-B0 was — on the same 2,551 images:
+
+  | PlantDoc | Swin-V2-T (L4) sd | EfficientNet-B0 (laptop) sd |
+  |---|---|---|
+  | Accuracy | **0.16 pp** (22.85, 22.58, 22.85) | 2.10 pp |
+  | Macro-F1 | **0.51 pp** (15.63, 16.27, 16.64) | 1.07 pp |
+  | Mapped-only accuracy | **0.31 pp** | 1.74 pp |
+  | ECE | **0.85 pp** | 3.12 pp |
+
+  So the bar ST-DAM has to clear is set by *its own* control, and that bar is
+  much lower than EfficientNet's spread suggested. One number stays noisy:
+  accuracy at 10% coverage varies by 3.6 pp, because 10% of PlantDoc is 255
+  images. Read abstention at higher coverage, or on more seeds.
 - **Calibration does separate them.** Under shift Swin-V2-T is far more
   overconfident: ECE 64.6% against EfficientNet-B0's 53.8 ± 3.1%, a gap well
   beyond the seed floor. Being confidently wrong is exactly what Novelty 3's
   abstention is for.
-- **So does the corn pair.** Swin-V2-T makes 40 Gray Leaf Spot / Leaf Blight
-  mistakes against EfficientNet-B0's 63–74: its PlantVillage advantage on that
-  pair survives on field images.
+- **The corn pair does not separate them after all, and the earlier claim here
+  that it did was built on one lucky run.** That claim came from the laptop's
+  single Swin-V2-T: 3 corn-pair mistakes on PlantVillage and 40 on PlantDoc,
+  against EfficientNet-B0's 8 and 63–74. The three L4 seeds put Swin-V2-T at
+  **6, 7, 9** on PlantVillage and **60, 66, 64** on PlantDoc. The laptop run
+  was a favourable draw on both, outside the L4 seeds' spread, and with three
+  seeds Swin-V2-T's corn-pair advantage over EfficientNet-B0 disappears.
+
+  The pair is still worth tracking as an ST-DAM endpoint — it is the hardest
+  distinction in the dataset and the one shape and texture should most affect —
+  but as a *within-model, seed-matched* comparison against this control, never
+  as a single-seed number against another architecture.
 - **Head-only MC-dropout cannot give epistemic uncertainty, and now it is
   clear why.** Of the model's total predictive entropy on PlantDoc, the part
   that comes from the 20 passes disagreeing with each other is 2.9–5.0%
@@ -132,24 +157,24 @@ until it was fixed on 2 Nov, and results have pushed themselves since.
 **4. ~~The Colab control: Swin-V2-T, three seeds.~~ Done** — the table above.
 Seed 42 finished on 3 Nov at 99.80% in 2 h 56 m, with no stalled epochs.
 
-**5. You, now (about 20 min): evaluate the four Colab runs.** Part H6: open
-`evaluate_on_colab.ipynb`, any GPU, *Run all*. It scores
-`efficientnet_b0_colab`, `swinv2_tiny_seed1`, `swinv2_tiny_seed2` and
-`swinv2_tiny_colab` on PlantVillage and PlantDoc with MC-dropout, and pushes.
+**5. ~~Evaluate the four Colab runs.~~ Done** (3 Nov, on a free T4 in 9
+minutes — evaluation trains nothing, so the L4's units were not spent on it).
+All nine runs now have an entry in `results/eval/`. Each of the four
+**reproduced its committed PlantVillage result exactly** although it was
+re-scored on a different GPU from the one that trained it, which is the
+checkpoints on Drive certifying themselves.
 
-It also repairs one thing on the way in. **`swinv2_tiny_colab`'s result is on
-Drive but not yet in git:** its clone was made before ST-DAM was committed, so
-when the queue tried to push three hours later GitHub refused the push as
-out-of-date. `train.py` writes every result twice — once in `results/`, once
-beside the weights on Drive — so nothing was lost, and this notebook picks the
-Drive copy up and commits it. The cause is fixed in `run_queue.push()`, which
-now replays result commits onto newer code before pushing; it will not happen
-again.
+`swinv2_tiny_colab`'s result was recovered on the way in, as designed. Its
+clone had been made before ST-DAM was committed, so when the queue tried to
+push three hours later GitHub refused the push as out-of-date, and the Colab
+runtime was recycled before anyone could fix it by hand. `train.py` writes
+every result twice — once in `results/`, once beside the weights on Drive — so
+the Drive copy was still there, and `recover_results()` committed and pushed
+it. The cause is fixed in `run_queue.push()`, which now replays result commits
+onto newer code before pushing.
 
-**6. You, afterwards (10 seconds, laptop): `git pull`.** Then ask Claude to
-read the completed control — above all the **PlantDoc** seed floor for
-Swin-V2-T on the L4, which is the number ST-DAM has to beat and is not yet
-measured for this model on this machine.
+**6. ~~Read the completed control.~~ Done** — the seed-floor table above, and
+the two corrections it forced.
 
 **7. ~~The ST-DAM module.~~ Done** (commit `f194287`). Five variants
 registered with timm; every one starts bit-identical to pretrained Swin-V2-T
@@ -175,13 +200,33 @@ On the evidence above, for ST-DAM against the control:
 
 Judge all of them **seed-matched and paired** — seed 1 against seed 1, image
 against image, McNemar per pair — and require the same direction in all three
-pairs. Comparing three-seed *means* on PlantDoc cannot work: the seed alone
-moves PlantDoc accuracy 4.2 points, so a difference would have to exceed about
-6 points before three-versus-three means could call it. Pairing uses which
-images flipped rather than the totals, and that is what makes three seeds
-enough — for an effect of roughly 2 points or more. **Below that, this
-experiment cannot tell, and more seeds will not rescue it; that is a fact
-about the benchmark, and it belongs in the paper rather than in a footnote.**
+pairs. Pairing uses which images flipped rather than the totals, so it is
+strictly more sensitive than comparing means.
+
+**What three seeds can actually resolve.** Taking the control's own standard
+deviations above, a three-versus-three comparison of means needs a difference
+of about 2.3 sd before it clears p < 0.05:
+
+| Endpoint | Control sd | Smallest difference 3 seeds can call |
+|---|---|---|
+| PlantDoc macro-F1 | 0.51 pp | **≈ 1.2 pp** |
+| PlantDoc mapped-only F1 | 0.86 pp | ≈ 2.0 pp |
+| PlantDoc ECE | 0.85 pp | ≈ 1.9 pp |
+| Corn pair, PlantDoc | 3.1 errors | ≈ 7 of ~63 |
+| PlantVillage accuracy | 0.01 pp | ≈ 0.03 pp — but that is 2 images, so still not an endpoint |
+
+An earlier version of this section put the bar at about 6 points, from
+EfficientNet-B0's 4.2-point PlantDoc spread. That was the wrong control: the
+spread that matters is the one belonging to the model ST-DAM modifies, and
+Swin-V2-T's is roughly ten times tighter. **A 1–2 point gain in PlantDoc
+macro-F1 is therefore detectable with three seeds** — a reasonable bar for an
+attention module, and a far better experiment than it looked.
+
+Two cautions. A standard deviation estimated from three runs is itself rough —
+its own 95% interval spans about half to six times the estimate — so treat
+these as the optimistic end and read a borderline result as borderline. And
+accuracy-at-10%-coverage is not in the table on purpose: at 255 images it
+varies by 3.6 pp between seeds and cannot support a claim either way.
 
 **9. Then the MoE head — carrying Novelty 3.** Part F has the rest. Settle the
 router-as-epistemic-signal question above before any of it is built.

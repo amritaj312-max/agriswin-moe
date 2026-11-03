@@ -79,6 +79,31 @@ def configuration(data):
     return data["model"], gpu.replace("NVIDIA GeForce ", "").replace("NVIDIA ", "")
 
 
+def pair_floor(floor, a, b):
+    """The seed noise a comparison of these two runs has to clear, and whether
+    it had to be borrowed from a model that is not one of them.
+
+    A gap is only as trustworthy as the noisier of the two things compared, so
+    this is the larger of the two configurations' own spreads -- never the
+    widest spread in the table. Judging one model's ablation by another
+    model's floor is how a real effect gets thrown away: on PlantDoc three
+    EfficientNet-B0 seeds spread 4.16 points while three Swin-V2-T seeds
+    spread 0.27, so EfficientNet's floor would bury any ST-DAM gain worth
+    having.
+
+    How much of the pair the floor covers is returned with it, as a marker: a
+    floor measured on one side cannot say whether the other side is noisier,
+    and one borrowed from a third model says less still. Both are usable, and
+    both are marked rather than passed off as the real thing.
+    """
+    own = [floor[c][2] for c in (configuration(a), configuration(b)) if c in floor]
+    if len(own) == 2:
+        return max(own), ""
+    if len(own) == 1:
+        return own[0], "~"           # only one of the two has been run twice
+    return max((spread for _, _, spread, _ in floor.values()), default=None), "*"
+
+
 def seed_floor(evals, split, metric):
     """{(model, gpu): (mean, sd, spread, n)} over runs differing only in seed."""
     groups = {}
@@ -145,11 +170,13 @@ def main():
         print("  none: no model here has been run with more than one seed.")
         print("  Without that, nothing below can be separated from seed noise.")
 
-    acc_floor = max((spread for _, _, spread, _ in floors.get("accuracy", {}).values()),
-                    default=None)
-    if acc_floor is not None:
-        print(f"\n  => Treat any accuracy gap below {acc_floor:.2%} between two models on "
-              f"{nice}\n     as indistinguishable from re-running one of them with another seed.")
+    accuracy_floors = floors.get("accuracy", {})
+    if accuracy_floors:
+        print(f"\n  => A gap on {nice} must clear the floor of the two configurations being")
+        print("     compared -- the larger of their own spreads, not the widest in this")
+        print("     table. Each reading below names the floor it used, with ~ when only one")
+        print("     side has been run twice and * when the number is borrowed from a model")
+        print("     that is neither of them.")
 
     # --- paired comparisons --------------------------------------------------
     print(f"\nMcNemar, exact, paired per image on {nice}:")
@@ -164,16 +191,19 @@ def main():
             same_config = configuration(a) == configuration(b)
             cross_machine = a["model"] == b["model"] and not same_config
             gap = abs(sum(ca) - sum(cb)) / len(ca)
+            limit, mark = pair_floor(accuracy_floors, a, b)
             if same_config:
                 reading = "SEED CHANGE ONLY -- any 'significance' here is the noise floor"
             elif cross_machine:
                 reading = "SAME MODEL, DIFFERENT GPU -- not a model comparison"
-            elif acc_floor is not None and gap < acc_floor:
-                reading = f"gap {gap:.2%} is inside the seed floor -- not a model difference"
+            elif limit is None:
+                reading = f"gap {gap:.2%}, but no seed floor exists yet -- cannot be judged"
+            elif gap < limit:
+                reading = f"gap {gap:.2%} is inside the {limit:.2%}{mark} floor -- not a model difference"
             elif p < 0.05:
-                reading = f"gap {gap:.2%} exceeds the seed floor and p < 0.05"
+                reading = f"gap {gap:.2%} clears the {limit:.2%}{mark} floor and p < 0.05"
             else:
-                reading = "not significant"
+                reading = f"gap {gap:.2%} clears the {limit:.2%}{mark} floor, but p = {p:.3g}"
             print(f"  {a['run_name'] + ' vs ' + b['run_name']:<50}{only_a:>8}{only_b:>8}"
                   f"{p:>10.3g}   {reading}")
 
