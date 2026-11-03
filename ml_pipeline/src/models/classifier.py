@@ -28,6 +28,8 @@ import timm
 import torch.nn as nn
 from timm.layers import DropPath
 
+import stdam  # noqa: F401 -- registers the ST-DAM backbones with timm by name
+
 
 def disable_residual_less_drop_path(model):
     """Replace drop-path in blocks without a shortcut by a no-op; returns how

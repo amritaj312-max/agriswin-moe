@@ -1,0 +1,6 @@
+# Table III, ST-DAM ablation. Both branches, cross-attention fusion, fixed filters -- the full module.
+# The module and the evidence behind its design: ml_pipeline/src/models/stdam.py
+# Shared hyperparameters: ../recipe.yaml. Control: baselines/swinv2_tiny.yaml,
+# the same backbone with no ST-DAM, trained on Colab as seeds 1, 2 and 42.
+run_name: stdam_full
+model: swinv2_tiny_stdam

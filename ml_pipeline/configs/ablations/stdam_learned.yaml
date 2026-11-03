@@ -1,0 +1,6 @@
+# Table III, ST-DAM ablation. Sobel and Gabor trainable from the fixed prior: does fixing them help?
+# The module and the evidence behind its design: ml_pipeline/src/models/stdam.py
+# Shared hyperparameters: ../recipe.yaml. Control: baselines/swinv2_tiny.yaml,
+# the same backbone with no ST-DAM, trained on Colab as seeds 1, 2 and 42.
+run_name: stdam_learned
+model: swinv2_tiny_stdam_learned

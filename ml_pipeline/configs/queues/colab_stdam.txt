@@ -1,0 +1,17 @@
+# Phase 3, stage one: does ST-DAM do anything at all?
+#   notebooks/train_on_colab.ipynb runs this file (set QUEUE to it).
+#
+# The full module, on the same three seeds as the control (swinv2_tiny_seed1,
+# _seed2, _colab), so every row has a seed-matched partner. About 11 hours on
+# an L4 -- roughly 3.6 h per run, since ST-DAM costs about 20% more per step
+# than plain Swin-V2-T.
+#
+# Only the full module is here on purpose. If three seeds of it cannot be told
+# apart from three seeds of plain Swin-V2-T -- on the corn pair, on PlantDoc,
+# and on calibration, not on PlantVillage accuracy, which is saturated -- then
+# asking which half of it matters is asking about nothing, and the 14 further
+# GPU hours of component ablations (stdam_shape, _texture, _sum, _learned) buy
+# a table of noise. Run those only once the full module has shown something.
+--config ml_pipeline/configs/ablations/stdam_full.yaml --set seed=1 run_name=stdam_full_seed1
+--config ml_pipeline/configs/ablations/stdam_full.yaml --set seed=2 run_name=stdam_full_seed2
+--config ml_pipeline/configs/ablations/stdam_full.yaml --set seed=42 run_name=stdam_full_seed42
