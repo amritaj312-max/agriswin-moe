@@ -119,14 +119,24 @@ either.** On 2,551 field images the models never saw, accuracy collapses to
   accuracy from 21.5% to 41.2% (Swin-V2-T) or 24.1% to 57.6% (MobileViT-S).
   Better, but not something to hand a farmer.
 
-  **This points Novelty 3 at Novelty 2 rather than away from it.** Real
-  epistemic uncertainty needs the passes to genuinely disagree, which needs
-  variation deeper than the head: a sparse MoE head routes an image to
-  different expert subsets, and those subsets *do* produce different answers.
-  Router disagreement is then an epistemic signal that costs one forward pass
-  instead of twenty, and the MoE head stops being a second bolted-on novelty
-  and becomes the mechanism the third one runs on. Decide this before building
-  the MoE head, not after.
+  Real epistemic uncertainty needs predictions that genuinely disagree, which
+  needs variation deeper than the head. A sparse MoE router supplies that, and
+  an earlier version of this note proposed it as a way to merge Novelties 2
+  and 3. **It is not a novelty: CARE (2026), EMoE (2025) and E³ (2021) already
+  use expert disagreement as an epistemic signal** — see ACTION_PLAN.md,
+  section 0.1. As a design it is still sensible, but it should be built only
+  if it can earn its place, and there is a cheap way to find out first.
+
+  **Measure the ceiling before building anything.** A router approximates an
+  ensemble, and three independent Swin-V2-T seeds already exist — an ensemble
+  for free. A first look, from the predictions already stored: when all three
+  seeds agree (44% of PlantDoc) they are right 32.7% of the time, and when
+  they disagree 16.6%. A real signal — but one model's plain softmax
+  confidence already reaches 31.3% at a similar coverage, so this crude
+  majority-vote version barely beats it. The proper test averages the three
+  models' probabilities and uses their mutual information; if *that* cannot
+  beat softmax confidence for abstention, a router will not either, and the
+  MoE phase can be cut before it costs weeks.
 
 PlantDoc itself ships 9 images under two contradictory labels and 20 twice
 under one label. `plantdoc.py` leaves those out and freezes the other 2,551 by
@@ -180,13 +190,28 @@ the two corrections it forced.
 registered with timm; every one starts bit-identical to pretrained Swin-V2-T
 (max logit difference 0.0) and costs +257k parameters, +20% per step.
 
-**8. You: train ST-DAM (about 11 h of L4, unattended).** The same training
-notebook with `QUEUE` set to `ml_pipeline/configs/queues/colab_stdam.txt` —
-the full module on the control's three seeds, so every row has a seed-matched
-partner. Only the full module: if three seeds of it cannot be told from three
-seeds of the control, asking *which half* of it matters is asking about
-nothing, and the four component ablations' 14 further GPU hours would buy a
-table of noise.
+**8. You, now: train ST-DAM (9–11 h of L4, unattended, about 55 compute
+units of the 179.56 you have).** Open
+[train_on_colab.ipynb](https://colab.research.google.com/github/amritaj312-max/agriswin-moe/blob/main/notebooks/train_on_colab.ipynb)
+and *Run all*: its queue field now defaults to `colab_stdam.txt`. The runtime
+must be the **L4** — the control's GPU — on the *Latest* runtime version, which
+is the 2026.10 image the control used.
+
+It trains the full module on the control's three seeds, and the pairing is
+real: ST-DAM draws its initial weights from a forked random stream, so at each
+seed it starts from the control's exact head, sees the same images in the same
+order with the same augmentations and dropout masks, and computes the identical
+function at step 0. Each pair differs in ST-DAM and nothing else. Only the full
+module: if three seeds of it cannot be told from three seeds of the control,
+asking *which half* of it matters is asking about nothing.
+
+What to expect within three minutes: `NVIDIA L4`, `images verified`, `results
+committed and pushed to GitHub as each run finishes`, then `stdam_full_seed1
+(fresh start)` with `swinv2_tiny_stdam 27.86 M params`. About 125 img/s —
+20% below the control's 149, as measured on the laptop — so roughly 5.4 min an
+epoch and 2.6–3.6 h a run. Keep the computer awake and on the charger with the
+tab open; if the runtime disconnects anyway, open the notebook and *Run all*,
+and the run resumes from its last finished epoch.
 
 **Write down what would count as a win before looking at the result.**
 On the evidence above, for ST-DAM against the control:
@@ -228,8 +253,37 @@ these as the optimistic end and read a borderline result as borderline. And
 accuracy-at-10%-coverage is not in the table on purpose: at 255 images it
 varies by 3.6 pp between seeds and cannot support a claim either way.
 
-**9. Then the MoE head — carrying Novelty 3.** Part F has the rest. Settle the
-router-as-epistemic-signal question above before any of it is built.
+**9. Claude, while ST-DAM trains (no GPU): the uncertainty ceiling.** Code for
+the deep-ensemble test above — averaged probabilities, mutual information,
+risk–coverage — plus temperature scaling, the calibration baseline every
+reviewer will expect. Built and checked on the laptop's three EfficientNet-B0
+checkpoints, so it is ready to run on the Swin-V2-T trio afterwards.
+
+**10. You, when the queue finishes (about 10 min): evaluate ST-DAM.**
+`evaluate_on_colab.ipynb` on a T4 — not the L4; evaluation trains nothing.
+
+**11. Claude: read ST-DAM against the table above** — paired, seed by seed,
+the same direction in all three pairs, clearing the floors. Also check that the
+ST-DAM results record the same PyTorch as the control's (`2.11.0+cu130`), since
+the pairing depends on it.
+
+**12. Decision gate.**
+- *If ST-DAM clears the bar:* the component ablations (shape, texture, sum,
+  learned) say which part of it works. Four variants on three seeds is 43
+  L4-hours, about 210 units — more than will be left; one seed each (14 h,
+  about 70 units) fits as a screen, with seeds added only where it shows
+  something.
+- *If it does not:* it is a null result, and a strong one — it rules out gains
+  above about 1.2 points of PlantDoc macro-F1. Report it as that, skip the
+  component ablations, and keep the units.
+
+**13. You: two decisions.** The paper's framing (ACTION_PLAN.md, section 0.1
+recommends leading with the measurement), and the venue and deadline, which set
+the page limit and so the number of tables. Then Claude writes the paper
+skeleton with empty tables, so each remaining experiment has a cell to fill.
+
+**14. Then the uncertainty phase, sized by step 9's ceiling**, and after it
+the student, the app and the writing. Part F has the rest.
 
 ---
 

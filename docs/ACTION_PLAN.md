@@ -7,6 +7,26 @@
 
 ## 0. Where the project actually stands
 
+**Updated 3 Nov 2026.** The 28 Oct snapshot below it is kept for the record.
+
+| Phase (section 4) | Share of the work | Done | What remains |
+|---|---|---|---|
+| 0 Decisions | — | partly | **venue and deadline not locked** — they set the page limit, so the tables, so the experiments |
+| 1 Foundation | 10% | ~90% | the paper skeleton (LaTeX with empty tables) |
+| 2 Baselines | 10% | 100% | — three models, two of them on three seeds |
+| 3 Novelty modules | 25% | ~30% | ST-DAM built and verified, its three-seed control complete; the ablation trains next; MoE not started |
+| 4 Uncertainty + cross-dataset | 10% | ~70% | deep-ensemble ceiling and temperature scaling |
+| 5 Student + mobile | 15% | 0% | |
+| 6 App + SLM | 15% | 0% | |
+| 7 Writing | 15% | 0% | |
+| **Overall** | | **≈ 33%** | |
+
+Phases 2 and 4 were scheduled for weeks 2 and 6; both were essentially done
+six days in. The part that is done is the part that decides whether anything
+after it can be believed.
+
+<details><summary>28 Oct 2026 snapshot</summary>
+
 | Item | State |
 |---|---|
 | Research gap analysis (20 papers) | **Done** — thorough, well sourced |
@@ -23,6 +43,59 @@ The whole project is currently **design documents**. Every number in the
 breakdowns (97% teacher, 95% student, <200 ms latency) is a *target*, not a
 measurement. The plan is excellent; the risk is that it is 6 novelties wide and
 0 lines deep.
+
+</details>
+
+### 0.1 The novelties, checked against 2025–26 literature (3 Nov 2026)
+
+The 20-paper gap analysis predates most of this. Checked claim by claim:
+
+| Planned novelty | Closest published work | Verdict |
+|---|---|---|
+| ST-DAM, shape–texture attention | STA-Net (Qiu et al., 2025), the paper ST-DAM is adapted from; Gabor-plus-attention is common in plant disease work (ATD-Net, LeafTAM) | **Incremental.** New only as "inside a pretrained hierarchical ViT, tested for field robustness" — STA-Net was never tested across domains — and only if it measurably helps |
+| Sparse MoE head | Salman et al., *Front. Plant Sci.* 2025: ViT + MoE, PlantVillage→PlantDoc; Hoang & Phan 2026: soft MoE with a Swin-Tiny expert | **Not novel** |
+| MC-dropout uncertainty and abstention under field shift | *Front. Plant Sci.* 2026 "reliability gap" (PlantVillage→PlantDoc, calibration, selective prediction); *Sci. Rep.* 2026 (Swin-T variant, MC-dropout, cross-domain ECE) | **Not novel** — and our head-only version measurably yields no epistemic signal |
+| Router disagreement as epistemic uncertainty (proposed in NEXT_STEPS on 3 Nov) | CARE (2026: disagreement equals the ensemble's weighted predictive variance), EMoE (2025), E³ "Sparse MoEs meet Efficient Ensembles" (2021) | **Not novel as a method.** Sensible as a design; not a claim |
+
+**What is distinctive, and none of the closest papers have it: the
+measurement.** Salman et al. report single runs with no variance, on a PlantDoc
+test set whose size and class count after "cleaning" are never stated, and get
+68% PlantVillage→PlantDoc. The *Sci. Rep.* paper reports "five independent runs
+with fixed seed 42" — one run five times — and 90% controlled→field. Careful
+studies find 22–30% (TinyCNN 28.6%; the reliability-gap paper a 67.7-point
+collapse; this project 22.8%). This project has per-model seed floors, paired
+tests, ablation pairs that differ in the module and nothing else, and a PlantDoc
+set frozen by content hash with its contradictory labels removed — and findings
+only that rigor produces:
+
+- seed floors differ thirteen-fold between models on the same field images
+  (PlantDoc accuracy sd 0.16 points for Swin-V2-T, 2.10 for EfficientNet-B0);
+- the same seed on a different GPU is a fresh draw;
+- a single-seed comparison manufactured a "Swin-V2-T keeps its advantage on
+  field images" result that three seeds erased (corn pair 40 against 60–66);
+- three seeds of one model, with identical accuracy, give the same answer on
+  only 44% of field images;
+- head-only MC-dropout over cached features gives structurally almost no
+  epistemic uncertainty (2.9–5.0% of predictive entropy).
+
+**Recommended framing: lead with the measurement.** Roughly: *how much of
+cross-domain plant-disease progress is real — a seed-controlled study of
+shape–texture attention and uncertainty under lab-to-field shift.* ST-DAM
+becomes the controlled test case, positive or null; uncertainty becomes "what
+actually helps abstention under shift"; the MoE head is built only if a
+deep-ensemble ceiling test shows ensemble-style uncertainty is worth
+approximating. This is a decision for the authors, and it does not block the
+ST-DAM ablation, which both framings need.
+
+Sources: [STA-Net](https://arxiv.org/abs/2509.03754) ·
+[Salman et al. 2025](https://www.frontiersin.org/journals/plant-science/articles/10.3389/fpls.2025.1522985/full) ·
+[Hoang & Phan 2026](https://arxiv.org/pdf/2606.23441) ·
+[Reliability gap, 2026](https://pmc.ncbi.nlm.nih.gov/articles/PMC13236948/) ·
+[Sci. Rep. 2026](https://www.nature.com/articles/s41598-026-55107-6) ·
+[TinyCNN](https://arxiv.org/pdf/2609.20290) ·
+[CARE](https://arxiv.org/html/2607.26052v1) ·
+[EMoE](https://arxiv.org/pdf/2505.13273) ·
+[E³](https://arxiv.org/pdf/2110.03360)
 
 ---
 
