@@ -4,7 +4,7 @@ The hands-on guide: what to open, what to type, what you should see, and what to
 do when something looks wrong. For *why* each step exists, see
 [ACTION_PLAN.md](ACTION_PLAN.md).
 
-**Where you are (2 Nov 2026):** the baselines (A–D) are trained and checked,
+**Where you are (3 Nov 2026):** the baselines (A–D) are trained and checked,
 scored on identical images with one recipe. These are Table II's baseline rows
 (Part E) — copy them in once the paper skeleton exists:
 
@@ -13,6 +13,28 @@ scored on identical images with one recipe. These are Table II's baseline rows
 | EfficientNet-B0 (seeds 42, 1, 2: mean ± sd) | 4.06M | 99.77 ± 0.02% | 99.66 ± 0.03% | 0.14 ± 0.02% | 17–20 |
 | MobileViT-S | 4.96M | 99.79% | 99.65% | 0.17% | 17 |
 | Swin-V2-T | 27.6M | 99.82% | 99.78% | 0.13% | 15 |
+
+**Phase 3's control is complete.** Plain Swin-V2-T has now been trained three
+times on one L4, changing nothing but the seed, and every ST-DAM row will be
+judged against these three:
+
+| Seed | Test acc | Macro-F1 | ECE | NLL | Mistakes | Best epoch |
+|---|---|---|---|---|---|---|
+| 1 | 99.804% | 99.66% | 0.15% | 0.0095 | 16 | 35/40 |
+| 2 | 99.816% | 99.72% | 0.15% | 0.0099 | 15 | 40/40 |
+| 42 | 99.804% | 99.73% | 0.15% | 0.0074 | 16 | 29/39 |
+| **mean ± sd** | **99.81 ± 0.01%** | **99.70 ± 0.04%** | **0.15 ± 0.00%** | | **15–16** | |
+
+So on one machine the seed moves PlantVillage accuracy by **one test image**
+and macro-F1 by 0.07 points. Move machines and it moves more: seed 42 scored
+99.816% / 99.78% F1 on the laptop and 99.804% / 99.73% on the L4 — same seed,
+same recipe, same images, one image and 0.05 F1 points apart. That is why each
+comparison table is trained on a single machine.
+
+**Plain Swin-V2-T already makes only 15–16 mistakes in 8,155 images, and one
+of those is seed noise.** ST-DAM's entire possible gain on PlantVillage
+accuracy is 16 images. Nothing can be concluded from that number, whichever
+way it lands.
 
 MobileViT-S's first run hit a stochastic-depth bug, since fixed, that wiped
 about 1 in 5 of its training images on every step; the row above is the re-run.
@@ -54,9 +76,32 @@ either.** On 2,551 field images the models never saw, accuracy collapses to
 - **So does the corn pair.** Swin-V2-T makes 40 Gray Leaf Spot / Leaf Blight
   mistakes against EfficientNet-B0's 63–74: its PlantVillage advantage on that
   pair survives on field images.
-- **Head-only MC-dropout gives almost no epistemic uncertainty** (about 0.02
-  nats): the abstention signal comes from the softmax, not from the passes
-  disagreeing. That bears on how Novelty 3 is built, in Phase 4.
+- **Head-only MC-dropout cannot give epistemic uncertainty, and now it is
+  clear why.** Of the model's total predictive entropy on PlantDoc, the part
+  that comes from the 20 passes disagreeing with each other is 2.9–5.0%
+  (0.021–0.024 nats); on PlantVillage it is 0.0001 nats. That is not a weak
+  signal, it is an absent one, and it is structural: the backbone features are
+  computed once and cached, so all 20 passes see the *same* feature vector and
+  differ only in which head units were dropped. Twenty draws from one feature
+  vector agree with each other almost perfectly — including when the feature
+  vector itself is wrong. Caching those features is what makes 20 passes cost
+  the same as 5, so this is not a bug to fix but a limit of where the dropout
+  sits.
+
+  What abstention there is comes from the softmax alone, and it does work in
+  the right direction: a wrong prediction carries 1.45–1.89× the entropy of a
+  right one, and keeping only the most confident tenth of PlantDoc lifts
+  accuracy from 21.5% to 41.2% (Swin-V2-T) or 24.1% to 57.6% (MobileViT-S).
+  Better, but not something to hand a farmer.
+
+  **This points Novelty 3 at Novelty 2 rather than away from it.** Real
+  epistemic uncertainty needs the passes to genuinely disagree, which needs
+  variation deeper than the head: a sparse MoE head routes an image to
+  different expert subsets, and those subsets *do* produce different answers.
+  Router disagreement is then an epistemic signal that costs one forward pass
+  instead of twenty, and the MoE head stops being a second bolted-on novelty
+  and becomes the mechanism the third one runs on. Decide this before building
+  the MoE head, not after.
 
 PlantDoc itself ships 9 images under two contradictory labels and 20 twice
 under one label. `plantdoc.py` leaves those out and freezes the other 2,551 by
@@ -80,28 +125,66 @@ Weights trained on Colab are kept on your Google Drive.
 
 **2. ~~Evaluation harness.~~ Done** — Part E2, findings above.
 
-**3. You, once (about 15 min): set up Colab.** Part H1 and H2: Colab Pro or
-pay-as-you-go compute units (the L4 and A100 need one of them), and a GitHub
-token saved as a Colab secret, so each result pushes itself when it finishes.
+**3. ~~Set up Colab.~~ Done.** Compute units, and a GitHub token as a Colab
+secret. The token took two tries: its saved state had no repository access
+until it was fixed on 2 Nov, and results have pushed themselves since.
 
-**4. You: the first Colab queue (a few hours of GPU, unattended).** Part H3:
-open `train_on_colab.ipynb`, choose the L4, *Run all*. It retrains
-EfficientNet-B0 seed 42 as an end-to-end check, then Swin-V2-T seeds 1 and 2,
-which give the ablation control a seed floor of its own. **Running (2 Nov):**
-EfficientNet-B0 99.67% and Swin-V2-T seed 1 99.80% are done; seed 2 is
-training. Their pushes failed on the token's permissions (H2 says how to fix
-it) but the results are safe on Drive.
+**4. ~~The Colab control: Swin-V2-T, three seeds.~~ Done** — the table above.
+Seed 42 finished on 3 Nov at 99.80% in 2 h 56 m, with no stalled epochs.
 
-**5. You: evaluate them (minutes).** Part H6: `evaluate_on_colab.ipynb`,
-*Run all*.
+**5. You, now (about 20 min): evaluate the four Colab runs.** Part H6: open
+`evaluate_on_colab.ipynb`, any GPU, *Run all*. It scores
+`efficientnet_b0_colab`, `swinv2_tiny_seed1`, `swinv2_tiny_seed2` and
+`swinv2_tiny_colab` on PlantVillage and PlantDoc with MC-dropout, and pushes.
 
-**6. Claude: the ST-DAM module (no GPU).** Code, configs, checks and an
-ablation queue file. Expect three design questions first.
+It also repairs one thing on the way in. **`swinv2_tiny_colab`'s result is on
+Drive but not yet in git:** its clone was made before ST-DAM was committed, so
+when the queue tried to push three hours later GitHub refused the push as
+out-of-date. `train.py` writes every result twice — once in `results/`, once
+beside the weights on Drive — so nothing was lost, and this notebook picks the
+Drive copy up and commits it. The cause is fixed in `run_queue.push()`, which
+now replays result commits onto newer code before pushing; it will not happen
+again.
 
-**7. You: the ST-DAM ablation on Colab.** The same training notebook with the
-ablation queue, several seeds per configuration, as the seed floor demands.
+**6. You, afterwards (10 seconds, laptop): `git pull`.** Then ask Claude to
+read the completed control — above all the **PlantDoc** seed floor for
+Swin-V2-T on the L4, which is the number ST-DAM has to beat and is not yet
+measured for this model on this machine.
 
-**8. Then the MoE head and the full teacher.** Part F has the rest.
+**7. ~~The ST-DAM module.~~ Done** (commit `f194287`). Five variants
+registered with timm; every one starts bit-identical to pretrained Swin-V2-T
+(max logit difference 0.0) and costs +257k parameters, +20% per step.
+
+**8. You: train ST-DAM (about 11 h of L4, unattended).** The same training
+notebook with `QUEUE` set to `ml_pipeline/configs/queues/colab_stdam.txt` —
+the full module on the control's three seeds, so every row has a seed-matched
+partner. Only the full module: if three seeds of it cannot be told from three
+seeds of the control, asking *which half* of it matters is asking about
+nothing, and the four component ablations' 14 further GPU hours would buy a
+table of noise.
+
+**Write down what would count as a win before looking at the result.**
+On the evidence above, for ST-DAM against the control:
+
+| Endpoint | Status | Why |
+|---|---|---|
+| PlantVillage accuracy | **not an endpoint** | 15–16 mistakes, one of them seed noise. Report it; conclude nothing from it. |
+| PlantDoc macro-F1 | **primary** | Most headroom (14.9–17.4% now) and where shape and texture should matter. |
+| Corn Gray Leaf Spot / Leaf Blight | **primary** | The one pair where Swin-V2-T's lead already survives the domain shift. |
+| PlantDoc ECE and NLL | **secondary** | 50–65% now. A module that helps should also be less confidently wrong. |
+
+Judge all of them **seed-matched and paired** — seed 1 against seed 1, image
+against image, McNemar per pair — and require the same direction in all three
+pairs. Comparing three-seed *means* on PlantDoc cannot work: the seed alone
+moves PlantDoc accuracy 4.2 points, so a difference would have to exceed about
+6 points before three-versus-three means could call it. Pairing uses which
+images flipped rather than the totals, and that is what makes three seeds
+enough — for an effect of roughly 2 points or more. **Below that, this
+experiment cannot tell, and more seeds will not rescue it; that is a fact
+about the benchmark, and it belongs in the paper rather than in a footnote.**
+
+**9. Then the MoE head — carrying Novelty 3.** Part F has the rest. Settle the
+router-as-epistemic-signal question above before any of it is built.
 
 ---
 
@@ -701,6 +784,20 @@ redraws the figures, and pushes the lot. Then, on the laptop:
 ```powershell
 git pull
 ```
+
+Two lines in the setup cell's output are worth a look before you walk away.
+`images  verified` means it is scoring the same pictures the laptop did. And
+if a previous session left a result unpushed — which is what happened to
+`swinv2_tiny_colab` — the output names it, either as a commit replayed onto
+newer code or on a `recovered` line when the Drive copy was used:
+
+```
+  recovered    swinv2_tiny_colab
+```
+
+Afterwards, `results/` should hold a `.json` for every run in the table and
+`results/eval/` one for each as well. Any run missing from `results/eval/` was
+not scored, and the reason is in the cell output above.
 
 ### H7. Another machine instead (a lab server, Kaggle)
 
