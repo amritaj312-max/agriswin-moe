@@ -139,12 +139,56 @@ def accept(run, min_acc, trailer):
         log(f"{run}: could not commit {rel}: {(done.stderr or done.stdout).strip()[:300]}")
         return True                                   # the result file is safe on disk
     log(f"{run}: committed {rel}")
+    push(run)
+    return True
 
-    if git("remote", "get-url", "origin").returncode == 0:
-        # never prompt: a sign-in window at 3 a.m. would wait for nobody
-        pushed = git("push", env=dict(os.environ, GIT_TERMINAL_PROMPT="0", GCM_INTERACTIVE="never"))
-        log(f"{run}: pushed" if pushed.returncode == 0 else
-            f"{run}: push failed (the commit is safe locally): {pushed.stderr.strip()[:300]}")
+
+def push(label):
+    """Send local result commits to the remote, replaying them on top of it
+    first if it has moved on. Returns whether the remote has them now.
+
+    A plain push is refused outright once anything else has reached the remote
+    meanwhile, and accept() never retries: on a second pass the result is
+    already committed, so it returns early. A Colab clone is made at the start
+    of a run and pushes hours later, so any commit made in between orphans its
+    result in a runtime that is about to be recycled -- which is how
+    swinv2_tiny_colab's result came to exist only on Drive.
+
+    Results are append-only files named after their run, so they always replay
+    cleanly. The rebase is still only attempted when every local commit touches
+    results/ and nothing else, so it can never rewrite code someone is working
+    on; there, the push is left for a human.
+    """
+    env = dict(os.environ, GIT_TERMINAL_PROMPT="0", GCM_INTERACTIVE="never")
+    if git("remote", "get-url", "origin").returncode != 0:
+        return False
+    git("fetch", "--quiet", env=env)
+    counts = git("rev-list", "--left-right", "--count", "@{upstream}...HEAD")
+    if counts.returncode != 0:
+        log(f"{label}: no upstream branch to push to (the commit is safe locally)")
+        return False
+    behind, ahead = (int(n) for n in counts.stdout.split())
+    if not ahead:
+        return True
+    if behind:
+        ours = git("diff", "--name-only", "@{upstream}...HEAD").stdout.split()
+        if any(not name.startswith("results/") for name in ours):
+            log(f"{label}: the remote has {behind} newer commit(s) and this clone has code "
+                f"changes of its own -- not pushed, so that nothing here is rewritten "
+                f"(the commit is safe locally)")
+            return False
+        if git("rebase", "@{upstream}").returncode != 0:
+            git("rebase", "--abort")
+            log(f"{label}: could not replay onto the remote's {behind} newer commit(s) "
+                f"-- not pushed (the commit is safe locally)")
+            return False
+        log(f"{label}: the remote had {behind} newer commit(s); replayed {ahead} result "
+            f"commit(s) on top")
+    pushed = git("push", env=env)
+    if pushed.returncode != 0:
+        log(f"{label}: push failed (the commit is safe locally): {pushed.stderr.strip()[:300]}")
+        return False
+    log(f"{label}: pushed {ahead} commit(s)")
     return True
 
 
@@ -171,29 +215,8 @@ def main():
         ctypes.windll.kernel32.SetConsoleTitleW("AgriSwin training queue -- closing this window stops it")
     log(f"{args.queue}: {len(items)} run(s), pid {os.getpid()}")
     code = run_items(items, args)
-    push_pending()
+    push("unpushed results")        # retry anything accept() could not send at the time
     return code
-
-
-def push_pending():
-    """Push result commits that never reached the remote.
-
-    accept() pushes each result as it commits it, but a push that fails then
-    (no network, no permission yet) is never retried by accept(): on the next
-    pass the result is already committed, so it returns early. Without this,
-    such a commit would wait for someone to notice it -- and on Colab, where
-    the clone dies with the runtime, it could be lost with it.
-    """
-    if git("remote", "get-url", "origin").returncode != 0:
-        return
-    ahead = git("rev-list", "--count", "@{upstream}..HEAD")
-    if ahead.returncode != 0 or not int(ahead.stdout.strip() or 0):
-        return
-    env = dict(os.environ, GIT_TERMINAL_PROMPT="0", GCM_INTERACTIVE="never")
-    pushed = git("push", env=env)
-    log(f"pushed {ahead.stdout.strip()} pending commit(s)" if pushed.returncode == 0 else
-        f"{ahead.stdout.strip()} commit(s) still unpushed (safe locally): "
-        f"{pushed.stderr.strip()[:300]}")
 
 
 def run_items(items, args):

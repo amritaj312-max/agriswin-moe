@@ -181,17 +181,15 @@ def configure_git():
 
 
 def push_pending():
-    """Push commits made here that never reached GitHub -- results a queue
-    committed while pushing was not yet possible. Returns how many."""
-    ahead = git("rev-list", "--count", "@{upstream}..HEAD")
-    count = int(ahead.stdout.strip() or 0) if ahead.returncode == 0 else 0
-    if count:
-        git("pull", "--rebase")                 # onto anything pushed meanwhile
-        pushed = git("push")
-        if pushed.returncode != 0:
-            print(f"Could not push {count} pending commit(s): {pushed.stderr.strip()[:200]}")
-            return 0
-    return count
+    """Send on result commits this runtime made but never pushed -- a queue's,
+    when pushing was not yet possible, or an earlier session's.
+
+    run_queue's own push does the work, so the rule for replaying results onto
+    newer code is the same here as during a run; it reports what it did.
+    """
+    sys.path.insert(0, f"{REPO}/ml_pipeline/src/training")
+    import run_queue
+    return run_queue.push("results from an earlier session")
 
 
 def acceptable(result_path):
@@ -266,9 +264,8 @@ def setup():
     checkpoints = link_checkpoints()
     token = configure_git()
     can_push = token == "ok"
-    pending = push_pending() if can_push else 0
-    if pending:
-        print(f"Pushed {pending} result commit(s) an earlier queue could not push.")
+    if can_push:
+        push_pending()
 
     recovered = recover_results()
     good = [r for r in recovered if acceptable(f"{REPO}/results/{r}.json")]
