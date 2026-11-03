@@ -220,7 +220,13 @@ On the evidence above, for ST-DAM against the control:
 |---|---|---|
 | PlantVillage accuracy | **not an endpoint** | 15–16 mistakes, one of them seed noise. Report it; conclude nothing from it. |
 | PlantDoc macro-F1 | **primary** | Most headroom (14.9–17.4% now) and where shape and texture should matter. |
-| Corn Gray Leaf Spot / Leaf Blight | **primary** | The one pair where Swin-V2-T's lead already survives the domain shift. |
+| PlantDoc accuracy **with the crop given**, crops with 2+ diseases | **primary** — added 3 Nov, before the ST-DAM queue was launched | 56–59% of field errors name the wrong *plant*, which a symptom module is not built to fix and which naming the crop removes (21–25% → 51–55%). ST-DAM's claim is about symptoms, so this is its natural test. Now 41–46% against 25% chance. |
+| Corn Gray Leaf Spot / Leaf Blight | **primary** | The hardest pair, and where shape and texture should matter most. Seed-matched against this control only. |
+
+Three primaries are three chances to find something by luck: a claim needs the
+same direction in all three seed pairs, and p-values are Holm-adjusted across
+the primaries. The crop-given endpoint's floor comes from re-scoring the three
+control seeds once the evaluator reports it.
 | PlantDoc ECE and NLL | **secondary** | 50–65% now. A module that helps should also be less confidently wrong. |
 
 Judge all of them **seed-matched and paired** — seed 1 against seed 1, image
