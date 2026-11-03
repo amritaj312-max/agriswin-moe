@@ -66,13 +66,26 @@ def corn_pair_errors(data, split):
                if (t, p) in ((gls, nlb), (nlb, gls)))
 
 
+def configuration(data):
+    """What a run is, apart from its seed: the model, and the GPU it trained on.
+
+    The GPU belongs in it. "Seed 42" on another machine is not a repeat of the
+    same run -- a different GPU, PyTorch build and worker count change the
+    augmentation stream, so it is a fresh draw. Pooling machines would call
+    that spread seed noise and inflate the floor every comparison is judged
+    against.
+    """
+    gpu = (data["checks"].get("trained_on_gpu") or "unknown GPU")
+    return data["model"], gpu.replace("NVIDIA GeForce ", "").replace("NVIDIA ", "")
+
+
 def seed_floor(evals, split, metric):
-    """{model: (mean, sd, spread, n)} over runs that differ only in seed."""
+    """{(model, gpu): (mean, sd, spread, n)} over runs differing only in seed."""
     groups = {}
     for data in evals:
-        groups.setdefault(data["model"], []).append(metric(data, split))
-    return {model: (st.mean(v), st.stdev(v) if len(v) > 1 else None, max(v) - min(v), len(v))
-            for model, v in groups.items() if len(v) > 1}
+        groups.setdefault(configuration(data), []).append(metric(data, split))
+    return {key: (st.mean(v), st.stdev(v) if len(v) > 1 else None, max(v) - min(v), len(v))
+            for key, v in groups.items() if len(v) > 1}
 
 
 def main():
@@ -124,9 +137,9 @@ def main():
         if not floor:
             continue
         floors[label] = floor
-        for model, (mean, sd, spread, n) in floor.items():
+        for (model, gpu), (mean, sd, spread, n) in sorted(floor.items()):
             sd_text = fmt.format(sd) if sd is not None else "n/a"
-            print(f"  {label:<18}{model:<26}{n} seeds: mean {fmt.format(mean)}, "
+            print(f"  {label:<18}{model + ' on ' + gpu:<44}{n} seeds: mean {fmt.format(mean)}, "
                   f"sd {sd_text}, spread {fmt.format(spread)}")
     if not floors:
         print("  none: no model here has been run with more than one seed.")
@@ -148,10 +161,13 @@ def main():
             only_b = sum(1 for x, y in zip(ca, cb) if y and not x)
             n = only_a + only_b
             p = binomtest(min(only_a, only_b), n, 0.5).pvalue if n else 1.0
-            same_model = a["model"] == b["model"]
+            same_config = configuration(a) == configuration(b)
+            cross_machine = a["model"] == b["model"] and not same_config
             gap = abs(sum(ca) - sum(cb)) / len(ca)
-            if same_model:
+            if same_config:
                 reading = "SEED CHANGE ONLY -- any 'significance' here is the noise floor"
+            elif cross_machine:
+                reading = "SAME MODEL, DIFFERENT GPU -- not a model comparison"
             elif acc_floor is not None and gap < acc_floor:
                 reading = f"gap {gap:.2%} is inside the seed floor -- not a model difference"
             elif p < 0.05:

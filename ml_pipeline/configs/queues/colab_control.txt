@@ -1,0 +1,12 @@
+# Completes the Phase 3 control: plain Swin-V2-T, three seeds, all on Colab.
+#   notebooks/train_on_colab.ipynb runs this file (set QUEUE to it).
+#
+# Seeds 1 and 2 are trained (99.80% and 99.82%); this adds seed 42, the same
+# seed as the laptop's swinv2_tiny. Every ST-DAM ablation row will be compared
+# against these three, and a difference counts only if it clears their spread,
+# so the control needs as many seeds as the rows it judges -- on one machine,
+# because a GPU change is itself a fresh draw.
+#
+# About 3 hours on an L4. Nothing else should be trained until this finishes:
+# the ST-DAM configs do not exist yet.
+--config ml_pipeline/configs/baselines/swinv2_tiny.yaml --set seed=42 run_name=swinv2_tiny_colab

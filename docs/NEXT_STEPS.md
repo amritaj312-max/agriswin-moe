@@ -645,6 +645,11 @@ runs it pushes everything waiting.
 4. **Keep the tab open** until the queue finishes. Colab may disconnect a
    runtime whose tab is closed or idle; nothing is lost if it does (H5), but
    the GPU waits until you come back.
+5. **Do not use Colab's *File → Save a copy to GitHub*.** It writes the
+   notebook back with every training log embedded in it — about 1,400 lines of
+   output per session, in a file that is meant to hold nine cells of code.
+   Nothing is lost by skipping it: the notebook is already on GitHub, and the
+   results it produces go there by themselves.
 
 What you should see, cell by cell:
 
