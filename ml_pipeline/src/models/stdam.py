@@ -216,13 +216,26 @@ def insert_stdam(model, **kwargs):
     A stage runs its blocks in order, so appending puts ST-DAM after that
     stage's Swin blocks have finished -- the "most complete and mature" point
     STA-Net argues for, and before the next stage halves the resolution.
+
+    The new layers draw their initial weights from a fork of the random number
+    stream, which is then put back as it was. train.py seeds first and builds
+    the model second, so without this every draw after ST-DAM's would shift:
+    the classifier head would start from different weights than the plain
+    Swin-V2-T control's at the same seed, and each epoch would visit the
+    images in a different order with different augmentations. "Seed 1 against
+    seed 1" would then share the number and nothing else. With the fork, the
+    two runs start from the same head and see the same images in the same
+    order, and since ST-DAM's forward pass draws nothing random, they stay in
+    step for the whole run -- so a paired comparison pairs runs that differ in
+    ST-DAM and in nothing else.
     """
     added = []
-    for index, ksize, wavelengths in PLACEMENT:
-        stage = model.layers[index]
-        dim = stage.blocks[-1].dim
-        stage.blocks.append(STDAM(dim, ksize, wavelengths, **kwargs))
-        added.append((index, dim))
+    with torch.random.fork_rng(devices=[]):     # built on the CPU: only its stream moves
+        for index, ksize, wavelengths in PLACEMENT:
+            stage = model.layers[index]
+            dim = stage.blocks[-1].dim
+            stage.blocks.append(STDAM(dim, ksize, wavelengths, **kwargs))
+            added.append((index, dim))
     return added
 
 

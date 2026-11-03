@@ -2,9 +2,16 @@
 #   notebooks/train_on_colab.ipynb runs this file (set QUEUE to it).
 #
 # The full module, on the same three seeds as the control (swinv2_tiny_seed1,
-# _seed2, _colab), so every row has a seed-matched partner. About 11 hours on
-# an L4 -- roughly 3.6 h per run, since ST-DAM costs about 20% more per step
-# than plain Swin-V2-T.
+# _seed2, _colab). The pairing is real, not just the same number: ST-DAM
+# draws its initial weights from a forked random stream, so at a given seed it
+# starts from the control's exact head, sees the same images in the same order
+# with the same augmentations and dropout masks, and at step 0 computes the
+# identical function (max logit difference 0.0). Each pair differs in ST-DAM
+# and nothing else. Train on the L4 only -- the control was, and a different
+# GPU is a fresh draw.
+#
+# About 11 hours on an L4 -- roughly 3.6 h per run, since ST-DAM costs about
+# 20% more per step than plain Swin-V2-T.
 #
 # Only the full module is here on purpose. If three seeds of it cannot be told
 # apart from three seeds of plain Swin-V2-T -- on the corn pair, on PlantDoc,
