@@ -248,13 +248,49 @@ def score(run, margins, log):
         logits, labels = torch.cat(logits), torch.cat(labels)
         entry = measures(logits.argmax(1), labels)
         entry["within_crop_balanced"], entry["classes_counted"] = within_crop_balanced(logits, labels)
+        # per image, so whole and boxed can be compared on the photographs
+        # themselves: the two views are the same images, which is the most
+        # tightly paired comparison this project has
+        entry["predictions"] = logits.argmax(1).tolist()
         name = "whole image" if margin is None else f"leaf box +{margin:.0%}"
         out["views"][name] = entry
+        out["labels"] = labels.tolist()
         log(f"    {name:16s} acc {entry['accuracy']:6.2%}  crop {entry['crop_accuracy']:6.2%}  "
             f"within-crop {entry['within_crop_balanced']:6.2%}  sink {entry['sink_rate']:6.2%}")
     del model
     torch.cuda.empty_cache()
     return out
+
+
+def report(log):
+    """Whole against boxed, as a paired test over the photographs themselves.
+
+    The two views are the same images through the same weights, so the only
+    difference is the crop -- a tighter pairing than any two training runs can
+    offer. McNemar counts just the images whose answer changed.
+    """
+    from scipy.stats import binomtest
+
+    with open(os.path.join(RESULTS_DIR, "boxed_leaves.json"), encoding="utf-8") as fh:
+        results = json.load(fh)
+    log(f"{'run':24s}{'view':14s}{'acc':>7s}{'crop':>8s}{'within':>8s}{'sink':>7s}"
+        f"{'fixed':>7s}{'broken':>7s}{'p':>10s}")
+    for run, data in results.items():
+        labels = torch.tensor(data["labels"])
+        base = torch.tensor(data["views"]["whole image"]["predictions"])
+        for view, entry in data["views"].items():
+            now = torch.tensor(entry["predictions"])
+            fixed = int(((now == labels) & (base != labels)).sum())
+            broke = int(((base == labels) & (now != labels)).sum())
+            swung = fixed + broke
+            p = binomtest(min(fixed, broke), swung, 0.5).pvalue if swung and view != "whole image" else None
+            log(f"{run if view == 'whole image' else '':24s}{view:14s}"
+                f"{entry['accuracy']:6.1%} {entry['crop_accuracy']:7.1%} "
+                f"{entry['within_crop_balanced']:7.1%} {entry['sink_rate']:6.1%}"
+                + ("".join(f"{v:>7}" for v in (fixed, broke)) + f"{p:>10.2g}"
+                   if p is not None else " " * 24))
+    log("\nfixed/broken count images the crop changed the answer on; p is an exact")
+    log("McNemar test over those. within = within-crop balanced accuracy, chance 25.3%.")
 
 
 def main():
@@ -264,10 +300,15 @@ def main():
                         help="box margins to score, as a fraction of box size")
     parser.add_argument("--build", action="store_true",
                         help="refreeze data/splits/plantdoc_boxes.csv and stop")
+    parser.add_argument("--report", action="store_true",
+                        help="summarise the saved results with a paired test, and stop")
     args = parser.parse_args()
 
     if args.build:
         build(lambda message: print(message, flush=True))
+        return
+    if args.report:
+        report(lambda message: print(message, flush=True))
         return
 
     runs = args.runs or sorted(
