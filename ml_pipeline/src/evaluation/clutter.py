@@ -53,7 +53,7 @@ from dataset import PlantVillageSplit  # noqa: E402
 from features import MASK_FLOOR, mask_index, mask_key  # noqa: E402
 from framing import BATCH, RESULTS_DIR, frozen_probe, load_run, zoom_out  # noqa: E402
 
-RESULT_FILE = os.path.join(RESULTS_DIR, "clutter.json")
+RESULT_FILE = os.path.join(RESULTS_DIR, "clutter{suffix}.json")
 DISTRACTORS = 5
 CHECKPOINT_DIR = os.path.join(paths.REPO_ROOT, "checkpoints")
 
@@ -102,18 +102,34 @@ def clutter_pad(image, scale, distractors, seed):
 
 
 class ClutteredTestSplit(torch.utils.data.Dataset):
-    """The frozen test split at one scale, surrounded by same-class leaves."""
+    """The frozen test split at one scale, surrounded by other leaves."""
 
-    def __init__(self, transform, scale, n_distractors=DISTRACTORS):
+    def __init__(self, transform, scale, n_distractors=DISTRACTORS, kind="same"):
         self.inner = PlantVillageSplit("test", transform=None)
-        self.transform, self.scale, self.n = transform, scale, n_distractors
+        self.transform, self.scale, self.n, self.kind = transform, scale, n_distractors, kind
         root = os.path.join(paths.data_root(), "raw", "plantvillage", "raw")
         self.colour_root = self.inner.image_root
         self.masks = mask_index(root)
-        # which other images could stand in as clutter, per class
-        self.by_class = {}
+        self.by_class, self.by_crop = {}, {}
         for row in self.inner.rows:
             self.by_class.setdefault(row["class_name"], []).append(row["path"])
+            self.by_crop.setdefault(row["crop"], []).append(row["path"])
+        self.all_crops = sorted(self.by_crop)
+
+    def pool_for(self, row, rng):
+        """Where this image's distractors come from.
+
+        'same' matches PlantDoc, whose extra leaves belong to the same plant,
+        but it cannot separate the cost of clutter from the benefit of more
+        evidence for the right label: five more leaves of the same disease are
+        five more chances to read it. 'other-crop' removes that benefit --
+        a distractor from another crop can only mislead -- so a model that
+        still names the target's class was not distracted by it.
+        """
+        if self.kind == "same":
+            return self.by_class[row["class_name"]]
+        others = [c for c in self.all_crops if c != row["crop"]]
+        return self.by_crop[rng.choice(others)]
 
     def __len__(self):
         return len(self.inner)
@@ -122,11 +138,10 @@ class ClutteredTestSplit(torch.utils.data.Dataset):
         row = self.inner.rows[index]
         with Image.open(paths.long_path(os.path.join(self.colour_root, row["path"]))) as handle:
             image = handle.convert("RGB")
-        pool = self.by_class[row["class_name"]]
         rng = random.Random(index)
         leaves = []
         for _ in range(self.n):
-            other = rng.choice(pool)
+            other = rng.choice(self.pool_for(row, rng))
             if other == row["path"] and len(pool) > 1:
                 continue
             leaves.append(cut_leaf(os.path.join(self.colour_root, other),
@@ -135,8 +150,8 @@ class ClutteredTestSplit(torch.utils.data.Dataset):
 
 
 @torch.no_grad()
-def score(forward, transform, scale, workers=4):
-    loader = torch.utils.data.DataLoader(ClutteredTestSplit(transform, scale),
+def score(forward, transform, scale, kind="same", workers=4):
+    loader = torch.utils.data.DataLoader(ClutteredTestSplit(transform, scale, kind=kind),
                                          batch_size=BATCH, shuffle=False,
                                          num_workers=workers, pin_memory=True)
     right = seen = 0
@@ -151,6 +166,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--runs", nargs="+")
     parser.add_argument("--scales", nargs="+", type=float, default=[0.55, 0.4])
+    parser.add_argument("--kind", default="same", choices=["same", "other-crop"],
+                        help="'same' matches PlantDoc; 'other-crop' distractors cannot "
+                             "add evidence for the target's label, only mislead")
     parser.add_argument("--skip-probe", action="store_true")
     args = parser.parse_args()
 
@@ -170,7 +188,7 @@ def main():
             control = json.load(fh)
 
     log("PlantVillage test at a fixed scale, padded with its own background (control)")
-    log(f"or with {DISTRACTORS} same-class leaves (clutter). Only the surround differs.\n")
+    log(f"or with {DISTRACTORS} '{args.kind}' leaves (clutter). Only the surround differs.\n")
     results = {}
     arms = [(run, False) for run in runs] + ([] if args.skip_probe else [("frozen probe", True)])
     for name, is_probe in arms:
@@ -178,7 +196,7 @@ def main():
         forward, transform = frozen_probe(log) if is_probe else load_run(name)[:2]
         entry = {}
         for scale in args.scales:
-            cluttered = score(forward, transform, scale)
+            cluttered = score(forward, transform, scale, args.kind)
             plain = control.get(name, {}).get("accuracy", {}).get(str(scale))
             entry[str(scale)] = {"clutter": cluttered, "background": plain,
                                  "cost": (plain - cluttered) if plain else None}
@@ -190,9 +208,10 @@ def main():
         results[name] = entry
         torch.cuda.empty_cache()
 
-    with open(RESULT_FILE, "w", encoding="utf-8") as fh:
+    dest = RESULT_FILE.format(suffix="" if args.kind == "same" else "_other_crop")
+    with open(dest, "w", encoding="utf-8") as fh:
         json.dump(results, fh, indent=2)
-    log(f"\nsaved {os.path.relpath(RESULT_FILE, paths.REPO_ROOT)}")
+    log(f"\nsaved {os.path.relpath(dest, paths.REPO_ROOT)}")
 
 
 if __name__ == "__main__":

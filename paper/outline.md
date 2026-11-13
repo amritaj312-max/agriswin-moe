@@ -95,13 +95,51 @@ So scale sensitivity is a property of these backbones, not something
 fine-tuning introduced, and a leaf detector would help every model about
 equally.
 
-**What that leaves unexplained is the boxed-leaf gap itself**, and the
-explanation has to be that a leaf box does more than fix scale: it also removes
-clutter, distractor leaves and surrounding scene. A model trained on one clean
-leaf on a plain bench gains from that cleanup; an ImageNet backbone, which has
-seen cluttered scenes throughout pretraining, does not. That is a claim about
-clutter rather than scale, and it is testable the same way — pad a PlantVillage
-leaf with *other leaves* rather than its own background.
+## Claim 6 — Fine-tuning trades scene robustness for leaf specialisation
+
+The boxed-leaf gap is not scale, and it is not clutter either. At fixed scale,
+with the target leaf bit-identical between conditions:
+
+| 5 distractor leaves are… | Fine-tuned | Frozen probe |
+|---|---|---|
+| the **same class** as the target | −0.35 pp (i.e. free) | −1.67 pp (helps) |
+| from **another crop** | **+29.1 pp cost** (20.5–42.6) | **+38.5 pp cost** |
+
+Same-class clutter is free because those leaves are extra evidence for the
+right label — five more chances to read the same disease. Distractors that
+cannot help are instead **devastating, 20 to 43 points**, and the frozen probe
+is damaged *more* than the average fine-tuned model, not less. So clutter
+sensitivity does not distinguish the arms either.
+
+Read together the two rows say something sharper than either alone: **what
+costs accuracy is not clutter but competition for the label.** These models
+have no notion of which leaf in a frame is the subject. That is a real
+deployment failure — field photographs routinely contain more than one
+species — and it is a second, independent argument for a detector, which
+disambiguates the subject rather than merely enlarging it.
+
+*Caveat to state in the paper:* with five foreign leaves against one target,
+the task is arguably ill-posed — nothing tells the model the centre leaf is
+the subject. The finding is that the models have no such prior, not that they
+answer a well-posed question wrongly.
+
+What does explain it is simpler and already measured:
+
+| | Whole field photo | Isolated leaf | Gain from boxing |
+|---|---|---|---|
+| Fine-tuned (5 runs) | 21.2–25.3% | 32.0–37.4% | +10.6 to +12.8 |
+| Frozen ImageNet probe | **26.4%** | **28.9%** | **+2.6** |
+
+**The probe is the best of all six arms on whole field photographs and the
+worst on the isolated leaf.** Fine-tuning on PlantVillage buys a model
+accuracy on a clean, centred leaf and costs it the ability to cope with a
+scene. The probe gains little from a leaf box because it was never
+scene-limited; the fine-tuned models gain a lot because they were.
+
+That reframes the practical advice. A leaf detector is worth ~11 points to a
+fine-tuned model, but part of what it buys back is capability the fine-tuning
+destroyed — and an ImageNet backbone with a linear head already has it, at the
+cost of being worse once the leaf is found.
 
 ---
 

@@ -80,3 +80,18 @@ PlantVillage test, each image shrunk into its own frame and padded with its own 
 | swinv2_tiny | 99.8% | 99.6% | 98.8% | 95.5% | 71.0% | 26.6% |
 | frozen probe | 98.7% | 97.3% | 95.6% | 91.4% | 70.7% | 35.1% |
 
+## Table VI — Clutter, with scale held still
+
+PlantVillage test at a fixed scale, the leaf at a PlantDoc leaf's median share of the frame. The target is identical in every column; only the surround differs. A positive number is accuracy clutter cost.
+
+| Model | Background (control) | Same-class clutter | Other-crop clutter |
+|---|---|---|---|
+| efficientnet_b0 | 94.8% | 93.9% (+0.90) | 68.9% (+25.91) |
+| efficientnet_b0_seed1 | 93.0% | 95.1% (-2.11) | 72.5% (+20.54) |
+| efficientnet_b0_seed2 | 93.9% | 95.1% (-1.18) | 70.5% (+23.36) |
+| mobilevit_s | 92.4% | 93.0% (-0.63) | 49.8% (+42.64) |
+| swinv2_tiny | 95.5% | 94.2% (+1.26) | 62.6% (+32.89) |
+| frozen probe | 91.4% | 93.1% (-1.67) | 52.9% (+38.53) |
+
+Same-class leaves are free, because they are more evidence for the right label. Leaves of another crop cost 20-43 points, and the frozen probe loses more than the average fine-tuned model, not less. What costs accuracy is competition for the label, not clutter.
+
