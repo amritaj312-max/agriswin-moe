@@ -267,21 +267,41 @@ def add_segmented():
     gives it away for free, so the leaf is composited onto a new background
     first. The initial clone leaves them out to save about 1 GB.
 
-    The clone is blobless, so widening it fetches only the blobs now wanted;
-    the colour images already here are not downloaded again.
+    This cannot widen the existing copy, because on most machines there is no
+    clone to widen: the colour images arrive from the cached archive on Drive,
+    which holds images and no git metadata. So the segmented tree is fetched
+    into a scratch clone of its own and moved into place. The clone is
+    blobless and sparse, so only the segmented blobs cross the network -- the
+    colour images are never downloaded a second time.
     """
     spec = DATASETS["plantvillage"]
-    dest = os.path.join(paths.data_root(), "raw", spec["dest"])
-    if not os.path.isdir(os.path.join(dest, ".git")):
-        print(f"[plantvillage] {dest} is not a git clone; run --dataset plantvillage first.")
+    root = os.path.join(paths.data_root(), "raw", spec["dest"], "raw")
+    target = os.path.join(root, "segmented")
+    if os.path.isdir(target) and len(os.listdir(target)) == spec["expected_classes"]:
+        print(f"[plantvillage] segmented copies already in place ({target})")
+        return True
+    if not os.path.isdir(os.path.join(root, "color")):
+        print(f"[plantvillage] {root}/color is missing; run --dataset plantvillage first.")
         return False
-    want = list(dict.fromkeys(spec["sparse"] + ["raw/segmented"]))
-    print(f"[plantvillage] widening the checkout to {want}  (~1 GB more)")
-    if not run(["git", "sparse-checkout", "set"] + want, cwd=dest):
+
+    work = os.path.join(paths.data_root(), "raw", "_segmented_fetch")
+    shutil.rmtree(work, ignore_errors=True)
+    print(f"[plantvillage] fetching raw/segmented at {spec['commit'][:7]}  (~1 GB)")
+    ok = run(["git", "clone", "--depth", "1", "--filter=blob:none", "--sparse",
+              "-c", "core.longpaths=true", spec["url"], work])
+    ok = ok and run(["git", "sparse-checkout", "set", "raw/segmented"], cwd=work)
+    ok = ok and pin("plantvillage", spec, work)
+    fetched = os.path.join(work, "raw", "segmented")
+    if not ok or not os.path.isdir(fetched):
+        print("[plantvillage] FAILED to fetch the segmented copies")
+        shutil.rmtree(work, ignore_errors=True)
         return False
-    folder = os.path.join(dest, "raw", "segmented")
-    classes = len(os.listdir(folder)) if os.path.isdir(folder) else 0
-    print(f"[plantvillage] segmented copies: {classes} class folders")
+
+    os.makedirs(root, exist_ok=True)
+    shutil.move(fetched, target)
+    shutil.rmtree(work, ignore_errors=True)
+    classes = len(os.listdir(target))
+    print(f"[plantvillage] segmented copies: {classes} class folders in {target}")
     return classes == spec["expected_classes"]
 
 
