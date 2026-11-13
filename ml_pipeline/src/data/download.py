@@ -258,12 +258,47 @@ def verify(name, spec, dest):
     return n_images > 0
 
 
+def add_segmented():
+    """Widen the PlantVillage checkout to its background-removed copies.
+
+    PlantVillage ships every image a second time with the leaf cut out, pixel
+    for pixel. The debiasing work needs them: a photo session's signature has
+    to be learned from the leaf alone, and on a whole image the background
+    gives it away for free, so the leaf is composited onto a new background
+    first. The initial clone leaves them out to save about 1 GB.
+
+    The clone is blobless, so widening it fetches only the blobs now wanted;
+    the colour images already here are not downloaded again.
+    """
+    spec = DATASETS["plantvillage"]
+    dest = os.path.join(paths.data_root(), "raw", spec["dest"])
+    if not os.path.isdir(os.path.join(dest, ".git")):
+        print(f"[plantvillage] {dest} is not a git clone; run --dataset plantvillage first.")
+        return False
+    want = list(dict.fromkeys(spec["sparse"] + ["raw/segmented"]))
+    print(f"[plantvillage] widening the checkout to {want}  (~1 GB more)")
+    if not run(["git", "sparse-checkout", "set"] + want, cwd=dest):
+        return False
+    folder = os.path.join(dest, "raw", "segmented")
+    classes = len(os.listdir(folder)) if os.path.isdir(folder) else 0
+    print(f"[plantvillage] segmented copies: {classes} class folders")
+    return classes == spec["expected_classes"]
+
+
 def main():
     parser = argparse.ArgumentParser(description="Download plant disease datasets")
     parser.add_argument("--dataset", choices=["plantvillage", "plantdoc", "all"],
                         default="all")
     parser.add_argument("--data-root", help="where to store datasets; persisted for later runs")
+    parser.add_argument("--segmented", action="store_true",
+                        help="also fetch PlantVillage's background-removed copies, into an "
+                             "existing clone (~1 GB), then stop")
     args = parser.parse_args()
+
+    if args.segmented:
+        if args.data_root:
+            paths.set_data_root(args.data_root)
+        sys.exit(0 if add_segmented() else 1)
 
     if args.data_root:
         root = paths.set_data_root(args.data_root)
