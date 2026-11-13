@@ -56,3 +56,6 @@ ml_pipeline/configs/data_root.txt
 
 # ---- Dev/smoke-test runs (train.py --set run_name=dev_...) ----
 results/dev_*
+
+# cached backbone features: hundreds of MB, rebuilt by debias/features.py
+results/features/
