@@ -6,8 +6,7 @@ The argument, and which measurement carries each step. Numbers live in
 **Working title.** *Right leaf, wrong reason: what a 99.8% plant-disease model
 is actually reading, and what removing it does not fix.*
 
-**Status.** Every claim below is measured. The one gap is Table V, and
-`ml_pipeline/src/evaluation/framing.py` fills it.
+**Status.** Every claim below is measured; every table has its numbers.
 
 ---
 
@@ -74,18 +73,35 @@ rather than a drawer:
 3. **The identifiable subspace has rank at most 8 of 768**, set by the data, not
    the estimator.
 
-## Claim 5 — How much is framing alone (Table V)
+## Claim 5 — Framing is ~22 of the 79 points, and fine-tuning did not cause it (Table V)
 
 PlantVillage test, each image shrunk into its own frame and padded with its own
-border colour, so only the framing changes. Weighting the measured curve by
-PlantDoc's own leaf-size distribution: **framing accounts for about 22 of the 79
-points**, leaving ~57 to everything else — lighting, clutter, camera, real-world
-variation, label noise.
+border colour, so only the framing changes. Weighting each model's measured
+curve by PlantDoc's own leaf-size distribution: **framing accounts for about 22
+of the 79 points**, leaving ~57 to everything else — lighting, clutter, camera,
+real-world variation, label noise.
 
-Open sub-question the run settles: fine-tuned models gain ~11 points from a leaf
-box, the frozen probe 2.5. If the frozen probe also holds up under zoom-out,
-fine-tuning on full-frame leaves *created* the dependence, and it is fixable at
-inference with a detector rather than by retraining.
+**The hypothesis this run was built to test is refuted, and that is the more
+useful result.** Fine-tuned models gain ~11 points from a leaf box while the
+frozen probe gains 2.5, which suggested fine-tuning on full-frame leaves had
+taught a dependence on that framing. It had not. Measured as each model's share
+of its own lab accuracy at PlantDoc-median framing, the frozen probe retains
+92.6% and the fine-tuned models 92.6–95.6% — the probe is at the *bottom* of the
+range — and at extreme zoom-out the probe is the most robust of the six (35.6%
+retained against 22.5–29.8%). Averaged over PlantDoc's real leaf sizes the two
+arms are indistinguishable: 78.8% for the probe, 73.9–78.8% fine-tuned.
+
+So scale sensitivity is a property of these backbones, not something
+fine-tuning introduced, and a leaf detector would help every model about
+equally.
+
+**What that leaves unexplained is the boxed-leaf gap itself**, and the
+explanation has to be that a leaf box does more than fix scale: it also removes
+clutter, distractor leaves and surrounding scene. A model trained on one clean
+leaf on a plain bench gains from that cleanup; an ImageNet backbone, which has
+seen cluttered scenes throughout pretraining, does not. That is a claim about
+clutter rather than scale, and it is testable the same way — pad a PlantVillage
+leaf with *other leaves* rather than its own background.
 
 ---
 
@@ -101,7 +117,9 @@ inference with a detector rather than by retraining.
 
 ## Before submission
 
-- [ ] Table V — run `framing.py` *(in flight)*
+- [ ] Clutter, as the successor to Claim 5: pad a PlantVillage leaf with other
+      leaves instead of its own background, and see whether fine-tuned models
+      lose more than the frozen probe. One afternoon, no Colab.
 - [ ] Reproduce one published number (BioCLIP 2 on PlantDoc's standard 236-image
       split) so reviewers can see 22% is a protocol difference, not a broken
       pipeline

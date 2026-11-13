@@ -69,5 +69,14 @@ The pre-registered rule required beating both the frozen probe and the marginal 
 
 ## Table V — How much of the collapse is framing alone
 
-_not run yet_ — `ml_pipeline/src/evaluation/framing.py`
+PlantVillage test, each image shrunk into its own frame and padded with its own border colour. Nothing but the framing changes. Scale 0.55 puts the leaf at a PlantDoc leaf's median share of the frame.
+
+| Model | 1 | 0.8 | 0.65 | 0.55 | 0.4 | 0.25 |
+|---|---|---|---|---|---|---|
+| efficientnet_b0 | 99.8% | 99.6% | 98.6% | 94.8% | 71.2% | 23.4% |
+| efficientnet_b0_seed1 | 99.8% | 99.5% | 98.1% | 93.0% | 65.6% | 29.7% |
+| efficientnet_b0_seed2 | 99.8% | 99.5% | 98.3% | 93.9% | 66.6% | 28.7% |
+| mobilevit_s | 99.8% | 99.5% | 97.9% | 92.4% | 55.4% | 22.5% |
+| swinv2_tiny | 99.8% | 99.6% | 98.8% | 95.5% | 71.0% | 26.6% |
+| frozen probe | 98.7% | 97.3% | 95.6% | 91.4% | 70.7% | 35.1% |
 
