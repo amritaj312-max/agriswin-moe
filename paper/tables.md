@@ -95,3 +95,17 @@ PlantVillage test at a fixed scale, the leaf at a PlantDoc leaf's median share o
 
 Same-class leaves are free, because they are more evidence for the right label. Leaves of another crop cost 20-43 points, and the frozen probe loses more than the average fine-tuned model, not less. What costs accuracy is competition for the label, not clutter.
 
+## Table VII — The same weights, under four protocols
+
+Two choices separate this work from published PlantDoc numbers: which images (2,551 de-duplicated, or the 228 in PlantDoc's own test folder) and which outputs (all 38, or only the 28 PlantDoc contains). Neither is hidden; they are different questions.
+
+| Model | All, 38-way | All, 28-way | Official test, 38-way | Official test, 28-way |
+|---|---|---|---|---|
+| efficientnet_b0 | **21.3%** | 25.0% | 29.4% | 35.1% |
+| efficientnet_b0_seed1 | **25.5%** | 28.4% | 33.3% | 37.3% |
+| efficientnet_b0_seed2 | **22.9%** | 26.1% | 36.0% | 37.3% |
+| mobilevit_s | **24.1%** | 27.6% | 33.3% | 37.3% |
+| swinv2_tiny | **21.4%** | 23.6% | 28.9% | 32.5% |
+
+Protocol alone moves the same weights from 21.3% to 37.3%. The bold column is what this paper reports, because a deployed model meets every image and cannot know which classes are absent.
+

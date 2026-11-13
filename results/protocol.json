@@ -1,0 +1,42 @@
+{
+  "efficientnet_b0": {
+    "all__38_way": 0.21324971318244934,
+    "all__28_way": 0.25009799003601074,
+    "official_test__38_way": 0.29385966062545776,
+    "official_test__28_way": 0.35087719559669495,
+    "images_all": 2551,
+    "images_official": 228
+  },
+  "efficientnet_b0_seed1": {
+    "all__38_way": 0.25480204820632935,
+    "all__28_way": 0.2842022776603699,
+    "official_test__38_way": 0.3333333432674408,
+    "official_test__28_way": 0.37280702590942383,
+    "images_all": 2551,
+    "images_official": 228
+  },
+  "efficientnet_b0_seed2": {
+    "all__38_way": 0.22892983257770538,
+    "all__28_way": 0.2614660859107971,
+    "official_test__38_way": 0.359649121761322,
+    "official_test__28_way": 0.37280702590942383,
+    "images_all": 2551,
+    "images_official": 228
+  },
+  "mobilevit_s": {
+    "all__38_way": 0.24147392809391022,
+    "all__28_way": 0.27557820081710815,
+    "official_test__38_way": 0.3333333432674408,
+    "official_test__28_way": 0.37280702590942383,
+    "images_all": 2551,
+    "images_official": 228
+  },
+  "swinv2_tiny": {
+    "all__38_way": 0.2144257128238678,
+    "all__28_way": 0.23559388518333435,
+    "official_test__38_way": 0.28947368264198303,
+    "official_test__28_way": 0.3245614171028137,
+    "images_all": 2551,
+    "images_official": 228
+  }
+}

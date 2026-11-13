@@ -10,6 +10,27 @@ is actually reading, and what removing it does not fix.*
 
 ---
 
+## Claim 0 — Why this paper's numbers look low (Table VII)
+
+Published PlantDoc results run 57.6% (Khalil et al. 2026, BioCLIP 2 frozen
+features) to 68% (Salman et al. 2025). This paper reports 21–25%. That has to
+be answered in the first table or nothing after it gets read.
+
+The same weights, scored four ways, span **21.3% to 37.3%** — a 16-point swing
+with no change to the model. Two choices do it: whether to score all 2,551
+de-duplicated images or the 228 surviving from PlantDoc's own 236-image test
+folder, and whether to score all 38 outputs or only the 28 classes PlantDoc
+contains. Neither choice is hidden; they are different questions, and the
+strict one is what a deployed model faces, since it meets every image and
+cannot know which classes are absent.
+
+**The remaining gap is encoder, not pipeline, and the comparison paper says so
+itself:** Khalil et al. report every fine-tuned CNN at least 22 points below
+BioCLIP 2 — around 35% — which is where these fine-tuned models land on their
+protocol (32.5–37.3%). The 57.6% belongs to frozen biology-pretrained
+features, a different method, and is their contribution rather than a baseline
+this work failed to reach.
+
 ## The problem with the field
 
 A plant-disease classifier reports 99.8% on PlantVillage and 22% on field
@@ -158,9 +179,9 @@ cost of being worse once the leaf is found.
 - [ ] Clutter, as the successor to Claim 5: pad a PlantVillage leaf with other
       leaves instead of its own background, and see whether fine-tuned models
       lose more than the frozen probe. One afternoon, no Colab.
-- [ ] Reproduce one published number (BioCLIP 2 on PlantDoc's standard 236-image
-      split) so reviewers can see 22% is a protocol difference, not a broken
-      pipeline
+- [x] ~~Show the gap to published numbers is protocol~~ — Table VII. Optional
+      strengthening: run BioCLIP 2 itself for a like-for-like row, which needs
+      `open_clip_torch` and about an hour.
 - [ ] Redraw the three existing figures from the current results
 - [ ] Decide venue: *Smart Agricultural Technology* or *Computers and
       Electronics in Agriculture*

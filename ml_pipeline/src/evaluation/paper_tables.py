@@ -158,6 +158,32 @@ def table_framing(out):
     out.append("")
 
 
+def table_protocol(out):
+    out.append("## Table VII — The same weights, under four protocols\n")
+    data = read("protocol.json")
+    if not data:
+        out.append(MISSING + " — `ml_pipeline/src/evaluation/protocol.py`\n")
+        return
+    first = next(iter(data.values()))
+    out.append(f"Two choices separate this work from published PlantDoc numbers: which "
+               f"images ({first['images_all']:,} de-duplicated, or the "
+               f"{first['images_official']} in PlantDoc's own test folder) and which "
+               f"outputs (all 38, or only the 28 PlantDoc contains). Neither is hidden; "
+               f"they are different questions.\n")
+    out.append("| Model | All, 38-way | All, 28-way | Official test, 38-way | "
+               "Official test, 28-way |")
+    out.append("|---|---|---|---|---|")
+    for run, entry in data.items():
+        out.append(f"| {run} | **{entry['all__38_way']:.1%}** | {entry['all__28_way']:.1%} | "
+                   f"{entry['official_test__38_way']:.1%} | "
+                   f"{entry['official_test__28_way']:.1%} |")
+    low = min(e["all__38_way"] for e in data.values())
+    high = max(e["official_test__28_way"] for e in data.values())
+    out.append(f"\nProtocol alone moves the same weights from {low:.1%} to {high:.1%}. The "
+               f"bold column is what this paper reports, because a deployed model meets "
+               f"every image and cannot know which classes are absent.\n")
+
+
 def table_clutter(out):
     out.append("## Table VI — Clutter, with scale held still\n")
     same, other = read("clutter.json"), read("clutter_other_crop.json")
@@ -193,6 +219,7 @@ def main():
     table_erasure(out)
     table_framing(out)
     table_clutter(out)
+    table_protocol(out)
     os.makedirs(os.path.dirname(DEST), exist_ok=True)
     with open(DEST, "w", encoding="utf-8") as fh:
         fh.write("\n".join(out) + "\n")
