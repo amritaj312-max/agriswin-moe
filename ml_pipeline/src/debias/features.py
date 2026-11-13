@@ -58,10 +58,32 @@ BATCH = 64
 MASK_FLOOR = 12          # a segmented pixel this dark is background, not leaf
 
 
-def segmented_path(colour_relative):
-    """Where PlantVillage keeps the background-removed twin of an image."""
-    stem = colour_relative.rsplit(".", 1)[0]
-    return f"{stem}_final_masked.jpg"
+def mask_index(root):
+    """{(class, tag): path} for every background-removed copy.
+
+    The two trees do not always agree on a filename. In four classes the
+    colour copy dropped the UUID that the segmented copy kept, so
+    "RS_Rust 1563.JPG" has to find "<uuid>___RS_Rust 1563_final_masked.jpg".
+    What both always carry is the tag after '___' -- the session code and
+    frame number -- so that is the key. It matches all 54,305 images, where
+    matching on the whole filename misses 1,196 of them.
+    """
+    index, folder = {}, os.path.join(root, "segmented")
+    if not os.path.isdir(folder):
+        raise FileNotFoundError(
+            f"{folder} is missing. Fetch it with:\n"
+            f"  python ml_pipeline/src/data/download.py --segmented")
+    for class_name in os.listdir(folder):
+        for name in os.listdir(os.path.join(folder, class_name)):
+            stem = name.rsplit(".", 1)[0].removesuffix("_final_masked")
+            index[(class_name, stem.split("___", 1)[-1])] = os.path.join(folder, class_name, name)
+    return index
+
+
+def mask_key(colour_relative):
+    """The (class, tag) a colour image's mask is filed under."""
+    class_name, name = colour_relative.replace("\\", "/").split("/")[-2:]
+    return class_name, name.rsplit(".", 1)[0].split("___", 1)[-1]
 
 
 def leaf_on_flat_colour(colour, segmented, seed):
@@ -86,6 +108,10 @@ class PlantVillageView(torch.utils.data.Dataset):
     def __init__(self, rows, transform, leaf_only):
         self.rows, self.transform, self.leaf_only = rows, transform, leaf_only
         self.root = os.path.join(paths.data_root(), "raw", "plantvillage", "raw")
+        self.masks = mask_index(self.root) if leaf_only else {}
+        missing = [r["path"] for r in rows if mask_key(r["path"]) not in self.masks]
+        if missing:
+            raise FileNotFoundError(f"{len(missing)} images have no mask, e.g. {missing[0]}")
 
     def __len__(self):
         return len(self.rows)
@@ -95,8 +121,7 @@ class PlantVillageView(torch.utils.data.Dataset):
         with Image.open(paths.long_path(os.path.join(self.root, "color", row["path"]))) as handle:
             image = handle.convert("RGB")
         if self.leaf_only:
-            mask_path = os.path.join(self.root, "segmented", segmented_path(row["path"]))
-            with Image.open(paths.long_path(mask_path)) as handle:
+            with Image.open(paths.long_path(self.masks[mask_key(row["path"])])) as handle:
                 image = leaf_on_flat_colour(image, handle, index)
         return self.transform(image), int(row["class_idx"])
 
