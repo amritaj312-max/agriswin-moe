@@ -7,19 +7,46 @@
 
 ## 0. Where the project actually stands
 
-**Updated 3 Nov 2026.** The 28 Oct snapshot below it is kept for the record.
+**Updated 13 Nov 2026.** The 28 Oct snapshot below it is kept for the record.
+
+> **13 Nov, the finding that redirects the project.** Scoring the same
+> checkpoints on the same 2,425 field photographs, whole and cropped to
+> PlantDoc's published leaf box, splits the lab-to-field collapse in two.
+> Handing the model the leaf is worth **10.6–11.6 points of accuracy on every
+> architecture** (11.1 pp mean, sd 0.54 across seeds — 5.6× the seed spread),
+> lifts crop accuracy 13–15 points, and cuts the collapse into "Pepper bell
+> healthy" from 16–23% of images to 4–8%. In a PlantDoc photograph the largest
+> leaf covers a median 30% of the frame, so a model scoring 22% is failing two
+> tasks at once — find the leaf, then read it — and the published literature
+> scores only the pair.
+>
+> **But two thirds of the collapse survives being handed the leaf** (best
+> boxed score 37.4% against 99.8% in the lab). So neither "it is just
+> framing" nor "it is all capture bias" is true, and a paper claiming either
+> alone would overclaim. Within-crop balanced accuracy also rehabilitates the
+> symptom result: 48–52% boxed against 25.3% chance is real skill, which the
+> earlier frequency-weighted figure had hidden behind the test set's class mix.
+>
+> ST-DAM is **cut** on this evidence (see NEXT_STEPS step 8): every
+> architecture collapses and recovers alike, so the backbone's attention is
+> not the bottleneck.
 
 | Phase (section 4) | Share of the work | Done | What remains |
 |---|---|---|---|
 | 0 Decisions | — | partly | **venue and deadline not locked** — they set the page limit, so the tables, so the experiments |
 | 1 Foundation | 10% | ~90% | the paper skeleton (LaTeX with empty tables) |
 | 2 Baselines | 10% | 100% | — three models, two of them on three seeds |
-| 3 Novelty modules | 25% | ~30% | ST-DAM built and verified, its three-seed control complete; the ablation trains next; MoE not started |
-| 4 Uncertainty + cross-dataset | 10% | ~70% | deep-ensemble ceiling and temperature scaling |
+| 3 Novelty modules | 25% | ~20% | ST-DAM built and verified but **cut unrun**; MoE cut. The novelty is now cross-class source erasure (NEXT_STEPS steps 9–12), prototyped next |
+| 4 Uncertainty + cross-dataset | 10% | ~85% | the scene-versus-leaf split is done; deep-ensemble ceiling and temperature scaling remain |
 | 5 Student + mobile | 15% | 0% | |
 | 6 App + SLM | 15% | 0% | |
 | 7 Writing | 15% | 0% | |
-| **Overall** | | **≈ 33%** | |
+| **Overall** | | **≈ 34%** | |
+
+Cutting ST-DAM and the MoE head moves phase 3 backwards on paper while moving
+the project forwards: the share that is *decided* is much larger than the
+share that is *built*, because what to build is now settled by measurement
+rather than by the October design.
 
 Phases 2 and 4 were scheduled for weeks 2 and 6; both were essentially done
 six days in. The part that is done is the part that decides whether anything

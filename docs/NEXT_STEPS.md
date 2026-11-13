@@ -89,6 +89,40 @@ either.** On 2,551 field images the models never saw, accuracy collapses to
   overconfident: ECE 64.6% against EfficientNet-B0's 53.8 ± 3.1%, a gap well
   beyond the seed floor. Being confidently wrong is exactly what Novelty 3's
   abstention is for.
+- **Two thirds of the field collapse is the model never finding the leaf.**
+  A PlantVillage image is one leaf filling a plain frame; in a PlantDoc
+  photograph the largest annotated leaf covers a median **30%** of the frame.
+  Scoring the same checkpoints on the same 2,425 photographs, whole and then
+  cropped to the leaf box PlantDoc's detection release publishes:
+
+  | | Whole image | Leaf box | Change |
+  |---|---|---|---|
+  | Accuracy | 21.2–25.3% | **32.5–37.4%** | +10.6 to +11.6 pp |
+  | Right plant | 42.9–47.2% | **56.7–62.5%** | +13.3 to +15.2 pp |
+  | Within-crop balanced (chance 25.3%) | 41.3–45.7% | **48.2–52.4%** | +6.4 to +7.8 pp |
+  | Predicted "Pepper bell healthy" | 15.7–22.8% | **4.0–8.0%** | roughly a third |
+
+  The gain is **11.1 pp on average with a standard deviation of 0.54 across
+  three seeds — 5.6 times the seed spread** — and it is the same size for
+  every architecture, exactly as the collapse itself was. It barely moves
+  between a tight crop and a 15% margin, so it is not an artifact of that
+  choice. The sink class is largely a framing artifact: hand the model a leaf
+  and the collapse into "Pepper bell healthy" mostly stops.
+
+  **This reopens detection and segmentation as contributions rather than
+  baselines**, and it means a method aimed only at the leaf pixels would be
+  aimed at the smaller half of the problem. But the residual is still large:
+  the best boxed score is 37.4% against 99.8% in the lab, so roughly two
+  thirds of the gap survives being handed the leaf. Both halves are real, and
+  a paper claiming either one alone would be overclaiming.
+
+  Within-crop balanced accuracy also rehabilitates a finding. The earlier
+  crop-given number (41–46%) could not beat always answering a crop's
+  commonest disease (44.5%). Weighting every class equally, so that guess
+  scores 1/n, the models reach 41.3–45.7% whole and 48.2–52.4% boxed against
+  25.3% chance. **There is real within-crop symptom skill; the earlier metric
+  hid it behind the test set's class mix.**
+
 - **The corn pair does not separate them after all, and the earlier claim here
   that it did was built on one lucky run.** That claim came from the laptop's
   single Swin-V2-T: 3 corn-pair mistakes on PlantVillage and 40 on PlantDoc,
@@ -190,106 +224,86 @@ the two corrections it forced.
 registered with timm; every one starts bit-identical to pretrained Swin-V2-T
 (max logit difference 0.0) and costs +257k parameters, +20% per step.
 
-**8. You, now: train ST-DAM (9–11 h of L4, unattended, about 55 compute
-units of the 179.56 you have).** Open
-[train_on_colab.ipynb](https://colab.research.google.com/github/amritaj312-max/agriswin-moe/blob/main/notebooks/train_on_colab.ipynb)
-and *Run all*: its queue field now defaults to `colab_stdam.txt`. The runtime
-must be the **L4** — the control's GPU — on the *Latest* runtime version, which
-is the 2026.10 image the control used.
+**8. ~~Train ST-DAM.~~ Cut, on the council's advice and today's evidence.**
+The module is built, verified and committed; it is simply not what the data
+asks for. Every architecture collapses by the same amount and recovers by the
+same amount when handed the leaf, so the bottleneck is not the backbone's
+attention. Running it would spend ~55 of 179.56 compute units to confirm a
+null. The queue file stays in the repository, and the module becomes a
+paragraph in Related Work describing what was built and why it was not run.
 
-It trains the full module on the control's three seeds, and the pairing is
-real: ST-DAM draws its initial weights from a forked random stream, so at each
-seed it starts from the control's exact head, sees the same images in the same
-order with the same augmentations and dropout masks, and computes the identical
-function at step 0. Each pair differs in ST-DAM and nothing else. Only the full
-module: if three seeds of it cannot be told from three seeds of the control,
-asking *which half* of it matters is asking about nothing.
+**The paper the evidence supports.** A lab-to-field collapse of 99.8% → 22%
+is not one failure but three, and no published work separates them:
 
-What to expect within three minutes: `NVIDIA L4`, `images verified`, `results
-committed and pushed to GitHub as each run finishes`, then `stdam_full_seed1
-(fresh start)` with `swinv2_tiny_stdam 27.86 M params`. About 125 img/s —
-20% below the control's 149, as measured on the laptop — so roughly 5.4 min an
-epoch and 2.6–3.6 h a run. Keep the computer awake and on the charger with the
-tab open; if the runtime disconnects anyway, open the notebook and *Run all*,
-and the run resumes from its last finished epoch.
-
-**Write down what would count as a win before looking at the result.**
-On the evidence above, for ST-DAM against the control:
-
-| Endpoint | Status | Why |
+| Stage | Cost | Evidence |
 |---|---|---|
-| PlantVillage accuracy | **not an endpoint** | 15–16 mistakes, one of them seed noise. Report it; conclude nothing from it. |
-| PlantDoc macro-F1 | **primary** | Most headroom (14.9–17.4% now) and where shape and texture should matter. |
-| PlantDoc accuracy **with the crop given**, crops with 2+ diseases | **primary** — added 3 Nov, before the ST-DAM queue was launched | 56–59% of field errors name the wrong *plant*, which a symptom module is not built to fix and which naming the crop removes (21–25% → 51–55%). ST-DAM's claim is about symptoms, so this is its natural test. Now 41–46% against 25% chance. |
-| Corn Gray Leaf Spot / Leaf Blight | **primary** | The hardest pair, and where shape and texture should matter most. Seed-matched against this control only. |
+| Never finding the leaf | ≈ 11 pp | Boxing the leaf recovers 10.6–11.6 pp on every architecture |
+| Naming the wrong plant | large | 43–47% crop accuracy whole, 57–63% boxed |
+| Naming the wrong disease | the rest | Within-crop balanced 48–52% boxed, against 25.3% chance |
 
-Three primaries are three chances to find something by luck: a claim needs the
-same direction in all three seed pairs, and p-values are Holm-adjusted across
-the primaries. The crop-given endpoint's floor comes from re-scoring the three
-control seeds once the evaluator reports it.
-| PlantDoc ECE and NLL | **secondary** | 50–65% now. A module that helps should also be less confidently wrong. |
+Headline: **two thirds of the collapse survives being handed the leaf.** That
+residual is where PlantVillage's capture bias lives, and it is what the method
+below targets.
 
-Judge all of them **seed-matched and paired** — seed 1 against seed 1, image
-against image, McNemar per pair — and require the same direction in all three
-pairs. Pairing uses which images flipped rather than the totals, so it is
-strictly more sensitive than comparing means.
+**9. Claude, no GPU: the acquisition-source table.** PlantVillage's filenames
+record who photographed each image (`GCREC_Bact.Sp`, `UF.GRC_YLCV_Lab`). Parse
+them into a per-image source label, merging spelling variants of one source
+(Rutg/Rut, MD/UMD) and dropping stray cells. Freeze and release it: 28 of 38
+classes come from a single source, which makes PlantVillage a real-world
+shortcut benchmark whose confounder is recorded rather than synthetic. **Only
+7 classes have genuinely distinct sources, five of them tomato** — that
+sparsity is the method's central difficulty, not a footnote.
 
-**What three seeds can actually resolve.** Taking the control's own standard
-deviations above, a three-versus-three comparison of means needs a difference
-of about 2.3 sd before it clears p < 0.05:
+**10. Claude, laptop only: prototype cross-class source erasure.** On cached
+features, so it costs no compute units.
+  1. Extract features of PlantVillage leaves pasted on random backgrounds,
+     using the segmented copies, so only the leaf can carry the source.
+  2. In the 7 multi-source classes, subtract each class mean from each
+     class-and-source mean; the top *k* directions of those differences span
+     the source subspace **U**.
+  3. Choose *k* by the RS check: the largest *k* at which a linear classifier
+     still separates the 14 classes source RS photographed, within seed noise.
+  4. Project features through I − UUᵀ and refit the head.
 
-| Endpoint | Control sd | Smallest difference 3 seeds can call |
-|---|---|---|
-| PlantDoc macro-F1 | 0.51 pp | **≈ 1.2 pp** |
-| PlantDoc mapped-only F1 | 0.86 pp | ≈ 2.0 pp |
-| PlantDoc ECE | 0.85 pp | ≈ 1.9 pp |
-| Corn pair, PlantDoc | 3.1 errors | ≈ 7 of ~63 |
-| PlantVillage accuracy | 0.01 pp | ≈ 0.03 pp — but that is 2 images, so still not an endpoint |
+**Cite, or it reads as plagiarism:** this is Nuisance Attribute Projection,
+used in speaker verification since the mid-2000s (Solomonoff, Campbell et al.),
+together with INLP, LEACE, DFR and class-conditional invariance (Li 2018).
+**What is new:** the source labels recovered from the filenames; carrying a
+signature learned from the few classes where source and class separate over to
+the classes where they coincide, which the usual methods cannot do because
+they assume every class appears under several conditions; the RS check; and
+the held-out-source tests, including fitting U on tomato alone and checking it
+transfers to orange and pepper.
 
-An earlier version of this section put the bar at about 6 points, from
-EfficientNet-B0's 4.2-point PlantDoc spread. That was the wrong control: the
-spread that matters is the one belonging to the model ST-DAM modifies, and
-Swin-V2-T's is roughly ten times tighter. **A 1–2 point gain in PlantDoc
-macro-F1 is therefore detectable with three seeds** — a reasonable bar for an
-attention module, and a far better experiment than it looked.
+**11. Baselines it must beat**, on the same backbone and the same seeds:
+the current recipe; background replacement (Xiao's Mixed-Rand, already
+published for leaves, so a baseline and never a contribution); MixStyle mixed
+across sources; a frozen-backbone linear probe; and naive LEACE over all
+images, which should visibly erase class signal. Also reproduce one published
+number — BioCLIP 2 on PlantDoc's standard 236-image split — so a reviewer can
+see the 22% is a protocol difference and not a broken pipeline.
 
-Two cautions. A standard deviation estimated from three runs is itself rough —
-its own 95% interval spans about half to six times the estimate — so treat
-these as the optimistic end and read a borderline result as borderline. And
-accuracy-at-10%-coverage is not in the table on purpose: at 255 images it
-varies by 3.6 pp between seeds and cannot support a claim either way.
+**Pre-register now, before any of it runs.** Primary endpoint: **within-crop
+balanced accuracy on boxed leaves**. Secondary: crop accuracy, sink rate,
+whole-image accuracy. Success: beat the best baseline by more than twice the
+larger seed standard deviation, paired McNemar p < 0.05 across three
+RNG-paired L4 seeds, with PlantVillage accuracy within 0.3 pp. **Kill rule:**
+if the laptop prototype does not beat both the frozen probe and naive LEACE,
+stop and write the analysis paper.
 
-**9. Claude, while ST-DAM trains (no GPU): the uncertainty ceiling.** Code for
-the deep-ensemble test above — averaged probabilities, mutual information,
-risk–coverage — plus temperature scaling, the calibration baseline every
-reviewer will expect. Built and checked on the laptop's three EfficientNet-B0
-checkpoints, so it is ready to run on the Swin-V2-T trio afterwards.
+**12. You: three Colab arms**, only if the prototype passes — background
+replacement, MixStyle and the method, three seeds each on the L4, about 135
+units of the 179.56.
 
-**10. You, when the queue finishes (about 10 min): evaluate ST-DAM.**
-`evaluate_on_colab.ipynb` on a T4 — not the L4; evaluation trains nothing.
+**13. You: decide framing and venue.** On success, *Computers and Electronics
+in Agriculture* or *Plant Phenomics*. On the kill rule, the analysis plus the
+source table to *Smart Agricultural Technology*. Pattern-recognition journals
+would want a second dataset — not this cycle.
 
-**11. Claude: read ST-DAM against the table above** — paired, seed by seed,
-the same direction in all three pairs, clearing the floors. Also check that the
-ST-DAM results record the same PyTorch as the control's (`2.11.0+cu130`), since
-the pairing depends on it.
-
-**12. Decision gate.**
-- *If ST-DAM clears the bar:* the component ablations (shape, texture, sum,
-  learned) say which part of it works. Four variants on three seeds is 43
-  L4-hours, about 210 units — more than will be left; one seed each (14 h,
-  about 70 units) fits as a screen, with seeds added only where it shows
-  something.
-- *If it does not:* it is a null result, and a strong one — it rules out gains
-  above about 1.2 points of PlantDoc macro-F1. Report it as that, skip the
-  component ablations, and keep the units.
-
-**13. You: two decisions.** The paper's framing (ACTION_PLAN.md, section 0.1
-recommends leading with the measurement), and the venue and deadline, which set
-the page limit and so the number of tables. Then Claude writes the paper
-skeleton with empty tables, so each remaining experiment has a cell to fill.
-
-**14. Then the uncertainty phase, sized by step 9's ceiling**, and after it
-the student, the app and the writing. Part F has the rest.
+**14. Also cut:** the MoE head, FastViT, the on-device language model, and the
+ask-the-farmer curve, which needs trustworthy uncertainty these models do not
+have (ECE 50–65%). MC-dropout shrinks to one paragraph reporting its negative
+result. Seed control moves to Methods: it is hygiene, not a contribution.
 
 ---
 
