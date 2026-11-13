@@ -94,7 +94,15 @@ def leaf_on_flat_colour(colour, segmented, seed):
     image, which is the very thing being measured; noise would add texture a
     texture-sensitive backbone could read as a session. A single colour,
     drawn from this image's own index, carries nothing and is reproducible.
+
+    A few masks were saved at a different resolution from the photograph they
+    annotate, so the mask is resampled to the image when they disagree. The
+    mask only decides which pixels are leaf; the pixels kept are always the
+    colour image's own, so resampling costs a little edge precision and
+    nothing else.
     """
+    if segmented.size != colour.size:
+        segmented = segmented.resize(colour.size, Image.NEAREST)
     mask = np.asarray(segmented.convert("L")) >= MASK_FLOOR
     out = np.asarray(colour.convert("RGB")).copy()
     rng = np.random.default_rng(seed)
