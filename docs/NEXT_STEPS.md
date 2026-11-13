@@ -245,65 +245,81 @@ Headline: **two thirds of the collapse survives being handed the leaf.** That
 residual is where PlantVillage's capture bias lives, and it is what the method
 below targets.
 
-**9. Claude, no GPU: the acquisition-source table.** PlantVillage's filenames
-record who photographed each image (`GCREC_Bact.Sp`, `UF.GRC_YLCV_Lab`). Parse
-them into a per-image source label, merging spelling variants of one source
-(Rutg/Rut, MD/UMD) and dropping stray cells. Freeze and release it: 28 of 38
-classes come from a single source, which makes PlantVillage a real-world
-shortcut benchmark whose confounder is recorded rather than synthetic. **Only
-7 classes have genuinely distinct sources, five of them tomato** — that
-sparsity is the method's central difficulty, not a footnote.
+**9. ~~The acquisition-source table.~~ Done** (`35664df`). Parsing 54,305
+filenames takes 0.6 s and no GPU. 26 photo sessions; **31 of 38 classes were
+shot by a single session**; 7 classes hold two or more sessions of 30+ images,
+across 3 crops; session RS spans 15 classes over 7 crops. Frozen in
+`data/splits/plantvillage_sources.csv`.
 
-**10. Claude, laptop only: prototype cross-class source erasure.** On cached
-features, so it costs no compute units.
-  1. Extract features of PlantVillage leaves pasted on random backgrounds,
-     using the segmented copies, so only the leaf can carry the source.
-  2. In the 7 multi-source classes, subtract each class mean from each
-     class-and-source mean; the top *k* directions of those differences span
-     the source subspace **U**.
-  3. Choose *k* by the RS check: the largest *k* at which a linear classifier
-     still separates the 14 classes source RS photographed, within seed noise.
-  4. Project features through I − UUᵀ and refit the head.
+**10. ~~Prototype cross-class session erasure.~~ Done, and it does not work.**
+Frozen ImageNet Swin-V2-T features of leaves cut out with PlantVillage's own
+masks and composited onto a flat random colour, so only leaf pixels can carry
+a session. The signature was estimated in the 7 identifiable classes and
+removed from all 38. Five head seeds per arm, PlantDoc accuracy:
 
-**Cite, or it reads as plagiarism:** this is Nuisance Attribute Projection,
-used in speaker verification since the mid-2000s (Solomonoff, Campbell et al.),
-together with INLP, LEACE, DFR and class-conditional invariance (Li 2018).
-**What is new:** the source labels recovered from the filenames; carrying a
-signature learned from the few classes where source and class separate over to
-the classes where they coincide, which the usual methods cannot do because
-they assume every class appears under several conditions; the RS check; and
-the held-out-source tests, including fitting U on tomato alone and checking it
-transfers to orange and pepper.
+| Arm | PlantDoc | Boxed leaf | vs baseline |
+|---|---|---|---|
+| **none** (frozen probe) | **26.35 ± 0.31%** | **28.82 ± 0.61%** | — |
+| conditional k=1 | 26.40 ± 0.28% | 28.54 ± 0.50% | +0.05 / −0.28 pp (0.1–0.5×) |
+| conditional k=4 | 26.30 ± 0.37% | 28.96 ± 0.13% | −0.05 / +0.01 pp (0.0–0.1×) |
+| conditional k=8 | 25.88 ± 0.23% | 28.38 ± 0.21% | −0.48 / −0.57 pp (1.5–1.8×) |
+| marginal k=4 | 22.20 ± 0.14% | 24.82 ± 0.26% | −4.16 / −4.13 pp (13×) |
+| marginal k=8 | 15.01 ± 0.18% | 18.28 ± 0.16% | −11.35 / −10.66 pp (37×) |
 
-**11. Baselines it must beat**, on the same backbone and the same seeds:
-the current recipe; background replacement (Xiao's Mixed-Rand, already
-published for leaves, so a baseline and never a contribution); MixStyle mixed
-across sources; a frozen-backbone linear probe; and naive LEACE over all
-images, which should visibly erase class signal. Also reproduce one published
-number — BioCLIP 2 on PlantDoc's standard 236-image split — so a reviewer can
-see the 22% is a protocol difference and not a broken pipeline.
+**The pre-registered kill rule fires.** The method had to beat both the frozen
+probe and naive erasure. It beats naive erasure overwhelmingly and does not
+beat the frozen probe at all: every conditional setting lands within 0.6 pp of
+it, and the seed spread is 0.13–0.61 pp, so this is a *precise* null rather
+than a failure to measure. Erasing a session signature from frozen features
+does not make them transfer to the field.
 
-**Pre-register now, before any of it runs.** Primary endpoint: **within-crop
-balanced accuracy on boxed leaves**. Secondary: crop accuracy, sink rate,
-whole-image accuracy. Success: beat the best baseline by more than twice the
-larger seed standard deviation, paired McNemar p < 0.05 across three
-RNG-paired L4 seeds, with PlantVillage accuracy within 0.3 pp. **Kill rule:**
-if the laptop prototype does not beat both the frozen probe and naive LEACE,
-stop and write the analysis paper.
+Three things are worth keeping from it:
 
-**12. You: three Colab arms**, only if the prototype passes — background
-replacement, MixStyle and the method, three seeds each on the L4, about 135
-units of the 179.56.
+- **Class-conditional estimation is necessary.** Erasing the marginal session
+  directions — session means over the whole dataset, ignoring class — costs up
+  to 11.35 pp, 37 times the seed spread, because in this data those directions
+  very nearly *are* the class directions. That is the predicted failure mode of
+  GroupDRO/DANN/IRM on a dataset this confounded, demonstrated rather than
+  argued.
+- **The RS check does not do the job it was designed for.** Marginal k=8 left
+  the class signal inside session RS at 97.3% (−0.1%) while destroying 11.35 pp
+  of field accuracy. Holding the session fixed can only see within-session
+  class signal; it is blind to damage done to telling *sessions apart*. A guard
+  for this needs to be cross-session, and this is a methodological finding in
+  its own right.
+- **The rank ceiling is real.** Six usable classes hold two sessions and one
+  holds three, so the identifiable subspace has rank at most 8 of 768. The
+  dataset supports no more, whatever the estimator.
 
-**13. You: decide framing and venue.** On success, *Computers and Electronics
-in Agriculture* or *Plant Phenomics*. On the kill rule, the analysis plus the
-source table to *Smart Agricultural Technology*. Pattern-recognition journals
-would want a second dataset — not this cycle.
+**11–12. Cut.** No Colab arms. There is nothing to scale up: the prototype was
+built to decide that cheaply, and it did, for one laptop-hour and zero compute
+units.
 
-**14. Also cut:** the MoE head, FastViT, the on-device language model, and the
-ask-the-farmer curve, which needs trustworthy uncertainty these models do not
-have (ECE 50–65%). MC-dropout shrinks to one paragraph reporting its negative
-result. Seed control moves to Methods: it is hygiene, not a contribution.
+**13. The paper is the analysis paper.** It was already the stronger half, and
+it now has three measured results no published work has, plus a negative one
+that is worth more than a marginal positive:
+
+1. The lab-to-field collapse splits into finding the leaf (≈11 pp, recovered by
+   cropping to the published box, p ≤ 2×10⁻³² paired, every architecture) and
+   reading it (the remaining two thirds).
+2. Class and photo session are confounded in PlantVillage's own filenames, 31
+   of 38 classes single-session, and the table is released.
+3. Erasing that session signature from frozen features does **not** close the
+   field gap, bounded to ±0.6 pp, while the marginal version that most
+   off-the-shelf methods would reach for costs up to 11 pp.
+
+Target *Smart Agricultural Technology* or *Computers and Electronics in
+Agriculture*. The honest framing is that the shortcut is real, recorded and
+removable — and that removing it from the representation is not what field
+robustness needs.
+
+**14. Still open, in order of value.** Each is a day or less and none needs
+Colab: whether the gap is instead framing, which the boxed-leaf result already
+points at (fine-tuned models gain 11 pp from a box, the frozen probe 2.5 pp);
+whether fine-tuning *creates* the sink-class collapse, since the frozen probe
+sinks 2.5% of images where fine-tuned models sink 16–23%; and reproducing one
+published number on PlantDoc's standard 236-image split so reviewers can see
+22% is a protocol difference, not a broken pipeline.
 
 ---
 

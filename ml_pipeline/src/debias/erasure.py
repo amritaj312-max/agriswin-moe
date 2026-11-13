@@ -175,18 +175,49 @@ def check_class_signal(features, class_names, session_names, basis, seed=0):
     return (predicted == y[test]).float().mean().item()
 
 
-def evaluate(head, mean, std, field, log, label):
-    """Score a head on a field view, in the measures the paper reports."""
-    logits = apply_head(head, mean, std, field["features"])
-    labels = field["labels"]
-    entry = measures(logits.argmax(1), labels)
-    entry["within_crop_balanced"], _ = within_crop_balanced(logits, labels)
-    log(f"      {label:28s} acc {entry['accuracy']:6.1%}  crop {entry['crop_accuracy']:6.1%}  "
-        f"within-crop {entry['within_crop_balanced']:6.1%}  sink {entry['sink_rate']:6.1%}")
-    return entry
+def evaluate(features, labels, basis, fields, seeds, log):
+    """Fit the head once per seed and score every field view.
+
+    The head is refitted rather than reused because its own randomness is the
+    floor any claimed gain has to clear, and on these features that floor is
+    a few tenths of a point -- small enough that a null here is a real bound
+    rather than a failure to measure.
+    """
+    x_train = erase(features, basis)
+    runs = {view: [] for view in fields}
+    for seed in seeds:
+        head, mean, std = fit_head(x_train, labels, seed=seed)
+        for view, field in fields.items():
+            logits = apply_head(head, mean, std, erase(field["features"], basis))
+            entry = measures(logits.argmax(1), field["labels"])
+            entry["within_crop_balanced"], _ = within_crop_balanced(logits, field["labels"])
+            runs[view].append(entry)
+    summary = {}
+    for view, entries in runs.items():
+        summary[view] = {key: {"mean": mean_of(entries, key), "sd": sd_of(entries, key),
+                               "seeds": [e[key] for e in entries]}
+                         for key in entries[0]}
+        stat = summary[view]
+        log(f"      {view:14s} acc {stat['accuracy']['mean']:6.2%} +-{stat['accuracy']['sd']:5.2%}"
+            f"   crop {stat['crop_accuracy']['mean']:6.2%}"
+            f"   within-crop {stat['within_crop_balanced']['mean']:6.2%}"
+            f"   sink {stat['sink_rate']['mean']:5.2%}")
+    return summary
 
 
-def run(ks, log, train_view="leaf"):
+def mean_of(entries, key):
+    return sum(e[key] for e in entries) / len(entries)
+
+
+def sd_of(entries, key):
+    values = [e[key] for e in entries]
+    if len(values) < 2:
+        return 0.0
+    centre = sum(values) / len(values)
+    return (sum((v - centre) ** 2 for v in values) / (len(values) - 1)) ** 0.5
+
+
+def run(ks, log, train_view="leaf", seeds=(0, 1, 2, 3, 4)):
     train = load(train_view)
     log(f"  training view: {train_view}")
     fields = {"plantdoc": load("plantdoc"), "plantdoc_box": load("plantdoc_box")}
@@ -205,8 +236,14 @@ def run(ks, log, train_view="leaf"):
     baseline = check_class_signal(features, class_names, session_names, None)
     log(f"\n  class signal inside session {CHECK_SESSION}, before erasing: {baseline:.1%}")
 
-    results = {"rank_supported": rank, "classes_used": used,
+    results = {"rank_supported": rank, "classes_used": used, "seeds": seeds,
                "check_before": baseline, "settings": {}}
+    log("\n  no erasure (the frozen-probe baseline this has to beat)")
+    results["settings"]["none"] = {
+        "check_after": baseline,
+        "fields": evaluate(features[rows_train], train["labels"][rows_train],
+                           None, fields, seeds, log)}
+
     for name, scatter in (("conditional", conditional), ("marginal", marginal)):
         for k in ks:
             if name == "conditional" and k > rank:
@@ -215,19 +252,21 @@ def run(ks, log, train_view="leaf"):
             kept = check_class_signal(features, class_names, session_names, basis)
             log(f"\n  {name}, k={k}: class signal inside {CHECK_SESSION} "
                 f"{kept:.1%} ({kept - baseline:+.1%})")
-            x = erase(features[rows_train], basis)
-            head, mean, std = fit_head(x, train["labels"][rows_train])
-            entry = {"check_after": kept, "fields": {}}
-            for view, field in fields.items():
-                entry["fields"][view] = evaluate(
-                    head, mean, std, {"features": erase(field["features"], basis),
-                                      "labels": field["labels"]}, log, view)
-            results["settings"][f"{name}_k{k}"] = entry
+            results["settings"][f"{name}_k{k}"] = {
+                "check_after": kept,
+                "fields": evaluate(features[rows_train], train["labels"][rows_train],
+                                   basis, fields, seeds, log)}
 
-    log("\n  no erasure (the frozen-probe baseline)")
-    head, mean, std = fit_head(features[rows_train], train["labels"][rows_train])
-    results["settings"]["none"] = {"check_after": baseline, "fields": {
-        view: evaluate(head, mean, std, field, log, view) for view, field in fields.items()}}
+    log("\n  against the baseline, in units of the larger seed spread:")
+    base = results["settings"]["none"]["fields"]
+    for name, entry in results["settings"].items():
+        if name == "none":
+            continue
+        for view in fields:
+            gap = entry["fields"][view]["accuracy"]["mean"] - base[view]["accuracy"]["mean"]
+            floor = max(entry["fields"][view]["accuracy"]["sd"], base[view]["accuracy"]["sd"])
+            ratio = abs(gap) / floor if floor else float("inf")
+            log(f"    {name:16s} {view:14s} {gap * 100:+6.2f} pp   {ratio:4.1f}x")
 
     with open(RESULT_FILE, "w", encoding="utf-8") as fh:
         json.dump(results, fh, indent=2)
@@ -238,11 +277,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--k", nargs="+", type=int, default=[1, 2, 4, 8],
                         help="subspace sizes to try")
+    parser.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2, 3, 4],
+                        help="head seeds; their spread is the floor a gain must clear")
     parser.add_argument("--train-view", default="leaf", choices=["leaf", "colour"],
                         help="'leaf' is the method; 'colour' leaves the session in the "
                              "background, where it is trivially readable")
     args = parser.parse_args()
-    run(args.k, lambda message: print(message, flush=True), args.train_view)
+    run(args.k, lambda message: print(message, flush=True), args.train_view, args.seeds)
 
 
 if __name__ == "__main__":

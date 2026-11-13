@@ -31,17 +31,39 @@
 > architecture collapses and recovers alike, so the backbone's attention is
 > not the bottleneck.
 
+> **13 Nov, later: the replacement novelty was built, tested and killed.**
+> Cross-class session erasure — estimate each photo session's signature in the
+> 7 classes where it is identifiable, remove it from all 38 — moves PlantDoc
+> accuracy by **−0.05 pp** at its best setting, against a head-seed spread of
+> 0.13–0.61 pp over five seeds. The pre-registered kill rule, written before
+> the run, fires: it had to beat the frozen probe and it does not.
+>
+> It is a precise null, not an underpowered one, and it leaves three things
+> worth publishing. Class-conditional estimation is **necessary**: the marginal
+> version, which is what GroupDRO, DANN or IRM would effectively reach for on
+> data this confounded, costs up to 11.35 pp (37× the seed spread) because
+> those directions nearly *are* the class directions. The RS check is
+> **insufficient**: marginal k=8 left within-session class signal at 97.3%
+> while destroying 11 pp of field accuracy, because holding a session fixed
+> cannot see damage to telling sessions apart. And the rank ceiling is real —
+> at most 8 identifiable directions of 768, whatever the estimator.
+>
+> **The paper is therefore the analysis paper**, which was always its stronger
+> half. Section 0.1's recommendation stands and is now evidence-backed: lead
+> with the measurement. A negative result this tight is worth more than a
+> marginal positive, and nothing published reports it.
+
 | Phase (section 4) | Share of the work | Done | What remains |
 |---|---|---|---|
 | 0 Decisions | — | partly | **venue and deadline not locked** — they set the page limit, so the tables, so the experiments |
 | 1 Foundation | 10% | ~90% | the paper skeleton (LaTeX with empty tables) |
 | 2 Baselines | 10% | 100% | — three models, two of them on three seeds |
-| 3 Novelty modules | 25% | ~20% | ST-DAM built and verified but **cut unrun**; MoE cut. The novelty is now cross-class source erasure (NEXT_STEPS steps 9–12), prototyped next |
+| 3 Novelty modules | 25% | ~25% | ST-DAM built but **cut unrun**; MoE cut; cross-class session erasure built, tested and **killed by its own pre-registered rule**. Three candidate novelties tried, none survived measurement |
 | 4 Uncertainty + cross-dataset | 10% | ~85% | the scene-versus-leaf split is done; deep-ensemble ceiling and temperature scaling remain |
 | 5 Student + mobile | 15% | 0% | |
 | 6 App + SLM | 15% | 0% | |
 | 7 Writing | 15% | 0% | |
-| **Overall** | | **≈ 34%** | |
+| **Overall** | | **≈ 36%** | |
 
 Cutting ST-DAM and the MoE head moves phase 3 backwards on paper while moving
 the project forwards: the share that is *decided* is much larger than the
