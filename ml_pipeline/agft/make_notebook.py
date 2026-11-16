@@ -80,8 +80,25 @@ finished epoch.
 """),
     code("""
 # 3. Drive holds every checkpoint, so a disconnect costs minutes, not hours.
+#    The first mount can fail with "mount failed" when a previous session left
+#    a stale handle behind; a forced remount clears it. If Drive stays
+#    unreachable the study still runs, but only until this runtime ends, so
+#    the fallback says so loudly rather than failing silently.
 from google.colab import drive
-drive.mount("/content/drive")
+
+STATE = "/content/drive/MyDrive/agft"
+try:
+    drive.mount("/content/drive")
+except Exception as first:
+    print(f"first mount failed ({first}); forcing a remount")
+    try:
+        drive.mount("/content/drive", force_remount=True)
+    except Exception as second:
+        STATE = "/content/agft"
+        print(f"\\nDRIVE UNAVAILABLE ({second}).")
+        print(f"Falling back to {STATE}, which disappears when this runtime ends.")
+        print("Nothing will resume after a disconnect. Fix Drive before a long run.")
+print("state directory:", STATE)
 """),
     code("""
 # 4. The tested pipeline. These modules carry 31 unit tests that run on a
@@ -110,7 +127,7 @@ for m in (P, stages, eda):
     importlib.reload(m)
 
 CFG = P.Config(
-    root="/content/drive/MyDrive/agft",   # everything resumable lives here
+    root=STATE,                           # everything resumable lives here
     img_size=224,
     batch_size=64,
     epochs=12, patience=3,                # early stopping on val macro-F1
