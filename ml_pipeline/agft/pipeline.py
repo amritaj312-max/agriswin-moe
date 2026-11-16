@@ -114,12 +114,25 @@ class Config:
     fold_epochs: int = 8
 
     root: str = "/content/drive/MyDrive/agft"
+    # The dataset cache deliberately does NOT live on Drive. Training reads it
+    # at random through memory-mapped Arrow files, and doing that over FUSE
+    # with several loader workers is both slow and a source of intermittent
+    # read errors. Re-downloading two gigabytes after a disconnect costs about
+    # two minutes; the checkpoints that cost hours are the ones kept on Drive.
+    hf_cache: str = "/content/hf"
     workers: int = 8
 
     @property
     def paths(self):
         return {k: os.path.join(self.root, k)
                 for k in ("cache", "splits", "ckpt", "results", "figures")}
+
+    @property
+    def cache_dir(self):
+        """Where datasets are downloaded; local disk unless told otherwise."""
+        if self.hf_cache and os.path.isdir(os.path.dirname(self.hf_cache)):
+            return self.hf_cache
+        return os.path.join(self.root, "hf")      # laptops, and anywhere else
 
 
 CFG = Config()
@@ -188,7 +201,7 @@ def load_plantvillage(cfg=CFG, log=print):
     from datasets import load_dataset
 
     data = load_dataset(cfg.pv_dataset, split="train",
-                        cache_dir=os.path.join(cfg.root, "hf"))
+                        cache_dir=cfg.cache_dir)
     names = data.features["label"].names
     drop = {names.index(n) for n in cfg.drop_classes if n in names}
     if drop:
@@ -215,7 +228,7 @@ def load_plantdoc(pv_classes, cfg=CFG, log=print):
     """
     from datasets import concatenate_datasets, load_dataset
 
-    parts = load_dataset(cfg.pd_dataset, cache_dir=os.path.join(cfg.root, "hf"))
+    parts = load_dataset(cfg.pd_dataset, cache_dir=cfg.cache_dir)
     data = concatenate_datasets([parts[s] for s in sorted(parts)])
     index = {n: i for i, n in enumerate(pv_classes)}
 

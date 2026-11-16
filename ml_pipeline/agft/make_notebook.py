@@ -80,24 +80,44 @@ finished epoch.
 """),
     code("""
 # 3. Drive holds every checkpoint, so a disconnect costs minutes, not hours.
-#    The first mount can fail with "mount failed" when a previous session left
-#    a stale handle behind; a forced remount clears it. If Drive stays
-#    unreachable the study still runs, but only until this runtime ends, so
-#    the fallback says so loudly rather than failing silently.
+#
+#    A bare "ValueError: mount failed" with no reason attached means the
+#    mountpoint is stale: a previous attempt left /content/drive behind, and
+#    every later plain mount trips over it. Unmounting and clearing the
+#    directory is the actual remedy; force_remount alone does not always
+#    remove a half-mounted FUSE handle. If Drive is still unreachable after
+#    that, the study runs from local disk -- but then nothing survives a
+#    disconnect, so it says so loudly instead of failing hours later.
+import os
+import shutil
+import subprocess
+
 from google.colab import drive
 
 STATE = "/content/drive/MyDrive/agft"
-try:
-    drive.mount("/content/drive")
-except Exception as first:
-    print(f"first mount failed ({first}); forcing a remount")
-    try:
-        drive.mount("/content/drive", force_remount=True)
-    except Exception as second:
-        STATE = "/content/agft"
-        print(f"\\nDRIVE UNAVAILABLE ({second}).")
-        print(f"Falling back to {STATE}, which disappears when this runtime ends.")
-        print("Nothing will resume after a disconnect. Fix Drive before a long run.")
+
+
+def mount_drive(attempts=3):
+    for attempt in range(attempts):
+        try:
+            drive.mount("/content/drive", force_remount=attempt > 0)
+            return True
+        except Exception as problem:
+            print(f"  mount attempt {attempt + 1} failed: {problem}")
+            subprocess.run(["fusermount", "-u", "/content/drive"],
+                           capture_output=True)
+            shutil.rmtree("/content/drive", ignore_errors=True)
+    return False
+
+
+if not mount_drive():
+    STATE = "/content/agft"
+    print("\\nDRIVE UNAVAILABLE after three attempts.")
+    print(f"Falling back to {STATE}, which disappears when this runtime ends:")
+    print("nothing will resume after a disconnect. Before a long run, fix this")
+    print("with Runtime > Disconnect and delete runtime, then Run all again.")
+else:
+    os.makedirs(STATE, exist_ok=True)
 print("state directory:", STATE)
 """),
     code("""
@@ -224,8 +244,11 @@ AGFT gave the fine-tuned branch on field images.
 rows = stages.summarise(CFG)
 """),
     code("""
-# 11. The headline figure.
+# 11. The headline figure. Needs at least one finished arm.
 import matplotlib.pyplot as plt
+
+if not rows:
+    raise SystemExit("No arm has finished yet -- run cell 9 to completion first.")
 
 names = [r["name"].replace("agft:", "AGFT ").split(".")[0] for r in rows]
 positions = range(len(rows))
