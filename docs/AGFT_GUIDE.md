@@ -1,7 +1,7 @@
 # AGFT study — what to do, in order
 
-One notebook, one L4, about 19 GPU-hours. Everything below is a single step
-you finish before starting the next.
+One notebook, one L4, at most about 24 GPU-hours. Everything below is a single
+step you finish before starting the next.
 
 **Notebook:** [agft_study.ipynb](https://colab.research.google.com/github/amritaj312-max/agriswin-moe/blob/main/notebooks/agft_study.ipynb)
 
@@ -28,12 +28,13 @@ and the diagnosis that fine-tuning hurts OOD (Kumar et al.).
 | | |
 |---|---|
 | GPU | L4. A100 also works but spends units faster; T4 is too slow |
-| Compute units | ~93 of your ~180, which leaves room for one re-run |
-| Time | ~19 GPU-hours, unattended, resumable |
+| Compute units | at most ~120 of your ~180 (measured upper bound); early stopping usually saves a good share |
+| Time | at most 24.4 GPU-hours, measured on an L4; unattended and resumable |
 | Drive space | ~2 GB at the peak. Check you have at least 5 GB free |
 
-**Cheaper if you need it.** In cell 5, `folds=3` saves ~7 hours, and
-`optuna_trials=5` saves ~1 hour. Three folds is still defensible; fewer is not.
+**Cheaper if you need it.** In cell 5, `folds=3` cuts roughly a quarter of the
+time, and `optuna_trials=5` a little more. Three folds is still defensible;
+fewer is not.
 
 ---
 
@@ -52,8 +53,12 @@ Confirm the top right says `L4` before going on.
 1. *"This notebook was not authored by Google"* → **Run anyway**. It is your
    own repository.
 2. *"Permit this notebook to access your Google Drive files?"* → **Connect to
-   Google Drive** → choose your account → **Allow**. Click this **promptly**;
-   the mount times out if it waits too long.
+   Google Drive**. Then **look for a second, separate popup window** from
+   Google: choose your account and click **Allow** (or **Continue**). It may
+   open behind the Colab window. You have about two minutes; if it is not
+   completed, the mount fails with `ValueError: mount failed` — that is what
+   the error you saw meant. The cell tries three times, re-opening it each
+   time.
 
 ## Step 3 — Check the first four cells (about three minutes)
 
@@ -65,11 +70,14 @@ state directory: /content/drive/MyDrive/agft
 <a commit hash>                                             <- cell 4
 ```
 
-* Cell 2 may print a note from *pip's dependency resolver*. It concerns other
-  packages Colab ships with; it is a warning, not a failure.
-* If cell 3 prints `mount attempt 1 failed`, it retries by itself. If it ends
-  with `DRIVE UNAVAILABLE`, stop: nothing would survive a disconnect. Use
-  *Runtime → Disconnect and delete runtime*, then Run all again.
+* Cell 2 prints a note from *pip's dependency resolver* about `cudf` and
+  `pyarrow`. `cudf` is a library Colab ships with that this study never
+  imports; it is a warning, not a failure.
+* If cell 3 prints `mount attempt 1 failed`, the sign-in popup was not
+  completed — find it and finish it before the next attempt. If all three
+  fail it prints `DRIVE NOT MOUNTED`: the data, EDA and preflight cells still
+  run, but the long training cell refuses to start. Run cell 3 again,
+  complete the popup, then **Run all**.
 
 ## Step 4 — The data cells (about five minutes the first time)
 
@@ -104,15 +112,18 @@ Every arm runs a few training steps on the GPU before the long cell starts,
 and one line per arm appears:
 
 ```
-  OK  convnextv2_tiny.fcmae_ft_in22k_in1k   ... img/s   peak memory ... GiB
+  OK  convnextv2_tiny.fcmae_ft_in22k_in1k        130 img/s   peak memory   7.1 GiB
+  OK  mobilenetv4_conv_medium.e500_r256_in1k     767 img/s   peak memory   1.7 GiB
   ...
+  OK  agft:gated                                 104 img/s   peak memory   7.1 GiB
 ```
 
-then an **upper bound** on each arm's GPU time. If an arm fails here, the
+then an **upper bound** on each arm's GPU time — 24.4 hours in total on the
+L4 where this was measured. If an arm fails here, the
 message says what to change — usually `batch_size=32` in cell 5 — and you have
 lost minutes, not hours. On a re-run the preflight is skipped once it passed.
 
-## Step 7 — The long cell (cell 10, ~19 hours)
+## Step 7 — The long cell (cell 10, up to ~24 hours)
 
 Seven arms, each: Optuna (with a line per trial) → 5-fold CV → final fit →
 two tests. **Leave the tab open**, the laptop awake and on the charger.

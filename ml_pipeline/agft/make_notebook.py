@@ -94,13 +94,13 @@ print("installed:", ", ".join(f"{{p}} {{_md.version(p)}}" for p in ("timm", "dat
     code("""
 # 3. Drive holds the results and the resume points.
 #
-#    A bare "ValueError: mount failed" with no reason attached means the
-#    mountpoint is stale: a previous attempt left /content/drive behind, and
-#    every later plain mount trips over it. Unmounting and clearing the
-#    directory is the actual remedy; force_remount alone does not always
-#    remove a half-mounted FUSE handle. If Drive is still unreachable after
-#    that, the study runs from local disk -- but then nothing survives a
-#    disconnect, so it says so loudly instead of failing hours later.
+#    Mounting opens Google's sign-in in a SEPARATE POPUP WINDOW: choose your
+#    account and click Allow (or Continue) within about two minutes. A bare
+#    "ValueError: mount failed" means that popup was not completed in time.
+#    Each of the three attempts below opens it again, and first clears any
+#    half-mounted folder a failed attempt left behind. Without Drive the
+#    preparatory cells still run from local disk, but the long cell refuses
+#    to start: nothing there would survive a disconnect.
 import os
 import shutil
 import subprocess
@@ -125,10 +125,11 @@ def mount_drive(attempts=3):
 
 if not mount_drive():
     STATE = "/content/agft"
-    print("\\nDRIVE UNAVAILABLE after three attempts.")
-    print(f"Falling back to {STATE}, which disappears when this runtime ends:")
-    print("nothing will resume after a disconnect. Before a long run, fix this")
-    print("with Runtime > Disconnect and delete runtime, then Run all again.")
+    print("\\nDRIVE NOT MOUNTED after three attempts.")
+    print("Google's sign-in popup (a separate window) was not completed. Run this")
+    print("cell again and, in the popup, choose your account and click Allow.")
+    print(f"Until then the preparatory cells use {STATE}, which vanishes with this")
+    print("runtime, and the long training cell will not start.")
 else:
     os.makedirs(STATE, exist_ok=True)
 print("state directory:", STATE)
@@ -148,10 +149,11 @@ sys.path.insert(0, f"{REPO}/ml_pipeline/agft")
     md("""
 ## Configuration
 
-Everything the study depends on, in one object. On one L4 the seven arms take
-about **19 GPU-hours, roughly 93 compute units**; the preflight below measures
-the real speed and prints an upper bound before the long cell starts. Lower
-`folds` or `optuna_trials` to spend less.
+Everything the study depends on, in one object. Measured on an L4, the seven
+arms take **at most 24.4 GPU-hours (about 120 compute units)** if no run ever
+stops early; early stopping and Optuna's pruning bring the real figure well
+below that. The preflight below re-measures on your GPU before the long cell
+starts. Lower `folds` or `optuna_trials` to spend less.
 
 **Where things are kept.** Results, the split and the resume points go to
 Drive. The datasets, the per-epoch checkpoints and Optuna's database stay on
@@ -256,7 +258,7 @@ pretrained model now, and turns the measured speeds into a time estimate.
     code("""
 # 9. Preflight: a few minutes. Skipped on re-runs once it has passed.
 ARMS = list(CFG.backbones) + ["agft:ft", "agft:frozen", "agft:fixed", "agft:gated"]
-stages.preflight(ARMS, pv, SPLITS, len(CLASSES), len(pd_data), CFG)
+PREFLIGHT = stages.preflight(ARMS, pv, SPLITS, len(CLASSES), len(pd_data), CFG)
 """),
     md("""
 ## Train, tune, cross-validate, test
@@ -271,6 +273,9 @@ last resume point. If Colab drops, open the notebook again and **Run all**.
 """),
     code("""
 # 10. The whole study. Safe to re-run after a disconnect.
+if not STATE.startswith("/content/drive"):
+    raise SystemExit("Drive is not mounted, so none of this would survive a disconnect. "
+                     "Run cell 3 again, complete Google's sign-in popup, then Run all.")
 for arm in ARMS:
     stages.run_arm(arm, pv, pd_data, SPLITS, labels=LABELS, groups=GROUPS,
                    classes=CLASSES, reachable=REACHABLE, cfg=CFG)
