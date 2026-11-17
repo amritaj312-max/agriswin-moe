@@ -178,7 +178,9 @@ and Trash counts against your quota for 30 days.
 
 | Symptom | Fix |
 |---|---|
-| `mount failed` three times | Runtime → Disconnect and delete runtime, then Run all |
+| `mount failed` three times | Click **Connect to Google Drive** yourself, so Google's window opens in front of you, and click **Allow**. If your consent arrives after an attempt expires, just run cell 3 again: it then mounts without asking |
+| **Reconnect** does nothing, or Colab shows **Sign in** | Chrome was signed out of Google, which also drops a running study. Sign in (Google may ask you to verify it's you), reload the notebook, then **Run all** |
+| The output stops updating but no error appears | The browser lost contact; the runtime may still be training. If it has disconnected, **Run all** resumes from Drive |
 | The preflight says out of memory | In cell 5 set `batch_size=32`, then Run all |
 | Drive is full | Free space at drive.google.com and empty Trash; raise `mirror_minutes` in cell 5 to write resume points less often |
 | You want to redo one arm | Delete its `results/final_*.json` and `results/cv_*.json`, and its files under `runs/` |
