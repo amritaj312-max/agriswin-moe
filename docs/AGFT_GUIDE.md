@@ -27,10 +27,10 @@ and the diagnosis that fine-tuning hurts OOD (Kumar et al.).
 
 | | |
 |---|---|
-| GPU | L4 only. A100 is fine but wastes units; T4 is too slow for the 19 hours |
-| Compute units | ~93 of your ~180. Leaves room for one re-run |
+| GPU | L4. A100 also works but spends units faster; T4 is too slow |
+| Compute units | ~93 of your ~180, which leaves room for one re-run |
 | Time | ~19 GPU-hours, unattended, resumable |
-| Drive space | ~4 GB (datasets + checkpoints) |
+| Drive space | ~2 GB at the peak. Check you have at least 5 GB free |
 
 **Cheaper if you need it.** In cell 5, `folds=3` saves ~7 hours, and
 `optuna_trials=5` saves ~1 hour. Three folds is still defensible; fewer is not.
@@ -39,10 +39,11 @@ and the diagnosis that fine-tuning hurts OOD (Kumar et al.).
 
 ## Step 1 — Open the notebook and set the GPU
 
-Open the link above. Then **Runtime → Change runtime type → L4 GPU → Save**.
+**Close any older copy of this notebook first.** Colab keeps a tab's state,
+and an old tab will keep running the old cells.
 
-Confirm the top right says `L4` before going on. On a T4 this study takes
-three times as long.
+Open the link above. Then **Runtime → Change runtime type → L4 GPU → Save**.
+Confirm the top right says `L4` before going on.
 
 ## Step 2 — Run all
 
@@ -54,61 +55,74 @@ three times as long.
    Google Drive** → choose your account → **Allow**. Click this **promptly**;
    the mount times out if it waits too long.
 
-## Step 3 — Check the first four cells, then walk away
-
-Within about three minutes you should see:
+## Step 3 — Check the first four cells (about three minutes)
 
 ```
-NVIDIA L4, 23034 MiB            <- cell 1
-Mounted at /content/drive       <- cell 3
+NVIDIA L4, 23034 MiB                                        <- cell 1
+installed: timm 1.0.30, datasets 5.2.0, optuna 5.1.0, ...   <- cell 2
+Mounted at /content/drive                                   <- cell 3
 state directory: /content/drive/MyDrive/agft
-<a commit hash>                 <- cell 4
+<a commit hash>                                             <- cell 4
 ```
 
-**If cell 3 says `mount failed`,** the notebook retries with a forced remount
-by itself. If it then prints `DRIVE UNAVAILABLE`, stop: the study will run but
-nothing will resume after a disconnect. Fix Drive first — usually
-*Runtime → Disconnect and delete runtime*, then Run all again.
+* Cell 2 may print a note from *pip's dependency resolver*. It concerns other
+  packages Colab ships with; it is a warning, not a failure.
+* If cell 3 prints `mount attempt 1 failed`, it retries by itself. If it ends
+  with `DRIVE UNAVAILABLE`, stop: nothing would survive a disconnect. Use
+  *Runtime → Disconnect and delete runtime*, then Run all again.
 
-## Step 4 — Let the data cells finish (~20 minutes, first run only)
+## Step 4 — The data cells (about five minutes the first time)
 
-Cell 6 downloads ~2 GB. Cell 7 decodes all 54,000 images once to hash them.
-Both cache to Drive, so later sessions skip them.
-
-**What you must see before training starts:**
+Cell 6 downloads ~2 GB to the runtime's own disk. Cell 7 hashes every image
+once (cached on Drive afterwards), compares all 1.5 billion pairs of images,
+and makes the split. You should see:
 
 ```
+dropping ['Background_without_leaves']: 1143 images
 PlantVillage: 54304 images, 38 classes
-PlantDoc: 2558 field images (20 dropped for carrying two labels)
-split: train ... val ... test ...  (by group, so no leaf spans two splits)
-no leakage: 54304 images, no perceptual hash in two splits
+PlantDoc: 2558 field images (20 dropped for carrying two labels), covering 27 of 38 PlantVillage classes
+hashes: 54304 in ...s
+compared 1,474,435,056 pairs in ...s: 4192 within 6 bits
+split: train 37990, val 8145, test 8169
+no leakage: 54304 images, and no two in different splits are within 4 bits of each other
 ```
 
-That last line is the leakage guarantee, verified rather than assumed. If it
-fails the notebook stops on an assertion — do not work around it.
+That last line is the leakage guarantee, checked pair by pair. If it fails,
+the notebook stops on an assertion — do not work around it.
 
-## Step 5 — Look at the EDA figure (cell 8)
+## Step 5 — The EDA (cell 8)
 
-Three panels: class balance, how much PlantVillage repeats itself, and how
-differently the two datasets are composed. This figure goes in the paper as
-Figure 1 and justifies two decisions: macro-F1 rather than accuracy (the
-classes are imbalanced), and grouped splitting (the dataset repeats itself).
+Prints the class balance and a **threshold table**: how many images count as
+near-duplicates if 0, 1, … 6 bits of their hashes may differ. At 4 bits, 883
+images fall into 401 groups of at most 11; at 6 bits, chains of matches merge
+820 images into one group. That table justifies the 4-bit threshold in the
+paper. The three-panel figure is the paper's Figure 1.
 
-## Step 6 — The long cell (~19 hours)
+## Step 6 — The preflight (cell 9, a few minutes)
 
-Cell 9 runs seven arms, each: Optuna → 5-fold CV → final fit → two tests.
-Expect roughly 2 hours per published arm and 3 per AGFT arm.
+Every arm runs a few training steps on the GPU before the long cell starts,
+and one line per arm appears:
 
-**Leave the tab open**, the laptop awake and on the charger. You can close the
-laptop lid only if you have already run the `powercfg` lines in
-`docs/NEXT_STEPS.md` Part A3.
+```
+  OK  convnextv2_tiny.fcmae_ft_in22k_in1k   ... img/s   peak memory ... GiB
+  ...
+```
 
-**If Colab disconnects:** reopen the notebook and **Run all** again. Finished
-stages are skipped and an interrupted arm resumes from its last finished
-epoch. You lose minutes, not hours. This is the single most important property
-of the notebook, and it is why every stage writes to Drive.
+then an **upper bound** on each arm's GPU time. If an arm fails here, the
+message says what to change — usually `batch_size=32` in cell 5 — and you have
+lost minutes, not hours. On a re-run the preflight is skipped once it passed.
 
-## Step 7 — Read the results (cells 10 and 11)
+## Step 7 — The long cell (cell 10, ~19 hours)
+
+Seven arms, each: Optuna (with a line per trial) → 5-fold CV → final fit →
+two tests. **Leave the tab open**, the laptop awake and on the charger.
+
+**If Colab disconnects:** open the notebook again and **Run all**. Finished
+stages are skipped. The run in progress resumes from its last resume point on
+Drive, saved every 15 minutes, so a disconnect costs at most ~15 minutes plus
+a few minutes of re-download. You will see `resuming at epoch N from Drive`.
+
+## Step 8 — Read the results (cells 11 and 12)
 
 The table has one row per arm. **Read the PlantDoc column, not PlantVillage.**
 Every arm will land within a point or so on PlantVillage, because that
@@ -122,26 +136,30 @@ The comparison that decides the paper:
 | they tie | The *ensemble* helps, the gate does not. Report it honestly — a two-branch result with a negative gate finding is still publishable |
 | `agft:gated` beats `agft:ft` but loses to `agft:frozen` | Fine-tuning is the problem, not the gate. That reproduces Kumar et al. in a new domain and is worth reporting |
 
-Also look at the `gate` column: it is the mean weight AGFT gave the fine-tuned
-branch on field images. Below 0.5 means the model learned to lean on frozen
-features out of distribution — direct evidence for the paper's thesis.
+The `gate` column is the mean weight AGFT gave the fine-tuned branch on field
+images. Below 0.5 means it learned to lean on frozen features out of
+distribution — direct evidence for the paper's thesis.
 
-## Step 8 — Write
+## Step 9 — Write
 
-Everything the paper needs is on Drive: `results/summary.json` for the tables,
-`figures/` for the plots. Suggested structure:
+Everything the paper needs is on Drive under `agft/`: `results/summary.json`
+for the tables, `results/eda.json` for the dataset numbers and the threshold
+table, `figures/` for the plots, `models/` for the seven final models.
 
 1. **Introduction** — lab accuracy is saturated; field accuracy is not.
 2. **Related work** — LP-FT, WiSE-FT, side-tuning; plant-disease baselines.
 3. **Method** — the gate, and why it reads the frozen branch.
-4. **Experiments** — the protocol: grouped splits, Optuna, 5-fold CV, early
-   stopping, one touch of the test set.
+4. **Experiments** — the protocol: near-duplicate-grouped splits and folds,
+   Optuna, 5-fold CV, early stopping, one touch of the test set.
 5. **Results** — the table, and the gate's behaviour under shift.
 6. **Limitations** — one dataset pair, one backbone for AGFT, a single seed
    per arm. Say so; reviewers find these anyway.
 
-**Venue.** For IEEE: a conference such as ICASSP, ICIP, or an agricultural-AI
-workshop. The study's size suits a 4–6 page conference paper, not a journal.
+**Venue.** An IEEE conference such as ICASSP, ICIP or an agricultural-AI
+workshop. The study's size suits a 4–6 page conference paper.
+
+**Afterwards:** empty your Drive Trash. Small replaced files collect there,
+and Trash counts against your quota for 30 days.
 
 ---
 
@@ -149,11 +167,10 @@ workshop. The study's size suits a 4–6 page conference paper, not a journal.
 
 | Symptom | Fix |
 |---|---|
-| `mount failed` twice | Runtime → Disconnect and delete runtime, then Run all |
-| Out of memory | In cell 5 set `batch_size=32`. AGFT holds two backbones |
-| A stage repeats work you have already done | A result file was lost. Check `results/` on Drive |
-| Optuna seems stuck | Trials are pruned silently; the study resumes from `optuna.db` |
-| You want to start one arm over | Delete its folder under `ckpt/` and its `results/final_*.json` |
+| `mount failed` three times | Runtime → Disconnect and delete runtime, then Run all |
+| The preflight says out of memory | In cell 5 set `batch_size=32`, then Run all |
+| Drive is full | Free space at drive.google.com and empty Trash; raise `mirror_minutes` in cell 5 to write resume points less often |
+| You want to redo one arm | Delete its `results/final_*.json` and `results/cv_*.json`, and its files under `runs/` |
 
 ## What this study does **not** claim
 

@@ -8,12 +8,11 @@ repeat itself.
 
 # %% CELL: eda
 import collections
-import json
 import os
 
 import numpy as np
 
-from pipeline import CFG
+from pipeline import CFG, group_ids, write_json
 
 
 def class_balance(labels, classes, log=print, top=8):
@@ -26,33 +25,47 @@ def class_balance(labels, classes, log=print, top=8):
     return counts
 
 
-def duplication(hashes, log=print):
-    counts = collections.Counter(hashes)
-    repeated = {h: n for h, n in counts.items() if n > 1}
-    log(f"  {len(counts)} distinct perceptual hashes for {len(hashes)} images")
-    log(f"  {sum(repeated.values())} images share a hash with at least one other")
-    log(f"  largest group of near-identical photographs: {max(counts.values())}")
-    return counts
+def duplication(groups, pairs, bits, log=print):
+    """How much the dataset repeats itself, and how that depends on the
+    threshold -- the table that justifies the threshold in the paper."""
+    counts = collections.Counter(groups)
+    linked = [n for n in counts.values() if n > 1]
+    log(f"  at <= {bits} bits: {sum(linked)} images in {len(linked)} near-duplicate "
+        f"groups, the largest of {max(counts.values())}")
+    sensitivity = []
+    log("  sensitivity -- bits allowed to differ, and what each threshold links:")
+    for t in range(max([d for _, _, d in pairs], default=0) + 1):
+        sizes = [n for n in collections.Counter(group_ids(len(groups), pairs, t)).values()
+                 if n > 1]
+        sensitivity.append({"bits": t, "groups": len(sizes), "images": sum(sizes),
+                            "largest": max(sizes, default=1)})
+        log(f"    <= {t}: {sum(sizes):6d} images in {len(sizes):5d} groups, "
+            f"largest {max(sizes, default=1)}{'   <- used' if t == bits else ''}")
+    return counts, sensitivity
 
 
-def figures(labels, classes, counts, hashes, pd_labels, cfg=CFG, log=print):
-    """Class balance, duplication and the domain gap, saved to Drive."""
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
+def figures(labels, classes, counts, groups, pd_labels, cfg=CFG, log=print):
+    """Class balance, duplication and the domain gap, saved to Drive.
 
-    fig, axes = plt.subplots(1, 3, figsize=(16, 4.2))
+    Drawn on a standalone Figure rather than through pyplot: switching
+    pyplot's backend here would switch it for the whole notebook, and every
+    later plt.show() would silently display nothing.
+    """
+    from matplotlib.figure import Figure
+
+    fig = Figure(figsize=(16, 4.2))
+    axes = fig.subplots(1, 3)
     order = [c for c, _ in counts.most_common()]
     axes[0].bar(range(len(order)), [counts[c] for c in order], color="#4c72b0")
     axes[0].set_title("PlantVillage: images per class")
     axes[0].set_xlabel("class, commonest first")
     axes[0].set_ylabel("images")
 
-    sizes = collections.Counter(collections.Counter(hashes).values())
+    sizes = collections.Counter(collections.Counter(groups).values())
     axes[1].bar(list(sizes), list(sizes.values()), color="#dd8452")
     axes[1].set_yscale("log")
     axes[1].set_title("Near-duplicates: group size")
-    axes[1].set_xlabel("images sharing one perceptual hash")
+    axes[1].set_xlabel(f"images per group (hashes within {cfg.dup_bits} bits)")
 
     pv_share = np.bincount(labels, minlength=len(classes)) / len(labels)
     pd_share = np.bincount(pd_labels, minlength=len(classes)) / max(len(pd_labels), 1)
@@ -66,21 +79,20 @@ def figures(labels, classes, counts, hashes, pd_labels, cfg=CFG, log=print):
     fig.tight_layout()
     dest = os.path.join(cfg.paths["figures"], "eda.png")
     fig.savefig(dest, dpi=140)
-    plt.close(fig)
     log(f"  saved {dest}")
     return dest
 
 
-def run(labels, classes, hashes, pd_labels, cfg=CFG, log=print):
+def run(labels, classes, groups, pairs, pd_labels, cfg=CFG, log=print):
     log("Class balance")
     counts = class_balance(labels, classes, log)
     log("\nRepetition inside PlantVillage")
-    duplication(hashes, log)
+    _, sensitivity = duplication(groups, pairs, cfg.dup_bits, log)
     log("\nFigures")
-    path = figures(labels, classes, counts, hashes, pd_labels, cfg, log)
-    with open(os.path.join(cfg.paths["results"], "eda.json"), "w", encoding="utf-8") as fh:
-        json.dump({"classes": len(classes), "images": len(labels),
-                   "distinct_hashes": len(set(hashes)),
-                   "imbalance": max(counts.values()) / max(min(counts.values()), 1)}, fh,
-                  indent=2)
+    path = figures(labels, classes, counts, groups, pd_labels, cfg, log)
+    write_json({"classes": len(classes), "images": len(labels),
+                "groups": len(set(groups)), "dup_bits": cfg.dup_bits,
+                "duplicate_sensitivity": sensitivity,
+                "imbalance": max(counts.values()) / max(min(counts.values()), 1)},
+               os.path.join(cfg.paths["results"], "eda.json"))
     return path

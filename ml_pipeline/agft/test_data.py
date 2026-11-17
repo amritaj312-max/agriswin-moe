@@ -18,8 +18,19 @@ def check(name, cond, detail=""):
     print(f"  {'PASS' if cond else 'FAIL'}  {name}{('  -- ' + detail) if detail else ''}")
 
 from pipeline import PLANTDOC_TO_PV
-pv_classes = sorted(set(PLANTDOC_TO_PV.values())) + ["__filler__"]
-print("1. PlantDoc loads and relabels into the PlantVillage space")
+from datasets import load_dataset_builder
+
+# The real class names of the pinned PlantVillage release, from its metadata
+# (no 2 GB download), minus the dropped class -- exactly what load_plantvillage
+# hands to load_plantdoc. Checking the bridge against its own targets instead
+# is how four wrong names once passed this test.
+print("0. The bridge targets classes the real PlantVillage has")
+names = load_dataset_builder(cfg.pv_dataset, revision=cfg.pv_revision).info.features["label"].names
+pv_classes = [n for n in names if n not in cfg.drop_classes]
+absent = sorted(v for v in PLANTDOC_TO_PV.values() if v not in pv_classes)
+check("every one of the 29 targets is a real PlantVillage class", not absent,
+      f"{len(pv_classes)} classes" if not absent else f"absent: {absent}")
+print("\n1. PlantDoc loads and relabels into the PlantVillage space")
 try:
     pd_data, reachable = P.load_plantdoc(pv_classes, cfg, log=lambda m: print("   ", m.strip()))
     check("PlantDoc downloaded and mapped", len(pd_data) > 2000, f"{len(pd_data)} images")
