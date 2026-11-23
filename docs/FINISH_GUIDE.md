@@ -53,6 +53,12 @@ agft:gated: final training on all 37990 training images
 Each epoch takes about 6–7 minutes, so eight take about 55. **Keep the laptop
 plugged in and awake, and leave the tab open.**
 
+**Check the epoch count.** If the lines read `epoch 1/12` instead of `epoch 1/8`,
+Colab loaded an older cached copy of the notebook. That is fine: it matches
+the other six arms exactly and takes about 25 minutes longer. But then the
+paper must not say "eight epochs". Delete those words from Section IV-C, from
+the footnote under Table 2, and from the Limitations paragraph.
+
 ## Step 3 — While it trains: put the paper on Overleaf (15 minutes)
 
 1. Open overleaf.com → **New Project → Upload Project**.
