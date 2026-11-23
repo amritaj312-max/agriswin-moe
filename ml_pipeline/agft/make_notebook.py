@@ -175,6 +175,9 @@ CFG = P.Config(
     epochs=12, patience=3,                # early stopping on val macro-F1
     optuna_trials=10, optuna_epochs=3, optuna_subset=0.2,
     folds=5, fold_epochs=8,
+    max_folds=3,                          # time limit: an arm not yet cross-validated
+                                          # runs 3 of the 5 folds (0 = all five);
+                                          # only AGFT-gated is affected in this study
     mirror_minutes=15,                    # resume point to Drive this often
     workers=8, seed=42,
 )
@@ -315,6 +318,29 @@ headline = os.path.join(CFG.paths["figures"], "headline.png")
 plt.savefig(headline, dpi=150)
 plt.close()
 display(ShowImage(filename=headline))
+"""),
+    md("""
+## What the gate does
+
+The study's claim is about the gate, so it is examined directly. One inference
+pass of the trained AGFT-gated model -- no training, about a minute -- records
+both branches' predictions and the gate for every image. That answers the three
+questions a reviewer will ask:
+
+* **Does each branch work alone?** The fine-tuned branch, the frozen branch
+  and the learned mixture, on both datasets.
+* **Does a per-image gate beat every fixed trade-off?** All 21 fixed values of
+  alpha, including the best one picked with hindsight on PlantDoc -- an oracle
+  no fixed method could choose.
+* **Does the gate route?** Its values on lab versus field images, and on the
+  field images that only the frozen branch, or only the fine-tuned one, gets
+  right.
+"""),
+    code("""
+# 13. The gate, examined. Inference only, about a minute; needs the gated arm.
+GATE = stages.gate_analysis(pv, pd_data, SPLITS, CLASSES, REACHABLE, CFG)
+if GATE is not None:
+    display(ShowImage(filename=os.path.join(CFG.paths["figures"], "gate_analysis.png")))
 """),
 ]
 

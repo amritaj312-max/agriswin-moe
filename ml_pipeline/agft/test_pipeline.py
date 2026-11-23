@@ -398,6 +398,13 @@ def test_optuna_and_cv(cfg):
     check("cross-validation reports a mean and a spread over folds",
           len(cv["folds"]) == cfg.folds,
           f"{cv['mean_macro_f1']:.3f} +- {cv['sd_macro_f1']:.3f}")
+    capped = dataclasses.replace(cfg, max_folds=1)
+    messages = []
+    cv = stages.cross_validate("agft:fixed", data, tr, labels, groups, 3, {"lr": 3e-4}, capped,
+                               log=messages.append)
+    check("max_folds stops cross-validation early and records how many ran",
+          len(cv["folds"]) == 1 and cv["planned_folds"] == cfg.folds
+          and any("stopped after 1 of" in m for m in messages))
 
 
 def test_preflight(cfg):
@@ -413,6 +420,106 @@ def test_preflight(cfg):
     messages = []
     stages.preflight(arms, data, splits, 3, 50, cfg, log=messages.append)
     check("a passed preflight is not repeated", any("skipped" in m for m in messages))
+
+
+def _notebook_cell(number):
+    """The source of the notebook's code cell that starts '# <number>.'."""
+    import make_notebook
+    for cell in make_notebook.CELLS:
+        source = "".join(cell["source"])
+        if cell["cell_type"] == "code" and source.lstrip().startswith(f"# {number}."):
+            return source
+    raise KeyError(f"no code cell numbered {number}")
+
+
+def test_end_of_study(cfg):
+    print("\n11. The end of the study: results table, headline figure, gate analysis")
+    import matplotlib
+    matplotlib.use("Agg")
+    shown = []
+    stubs = {"display": shown.append, "ShowImage": lambda filename: filename, "os": os}
+
+    data = FakeData(120, 4, seed=7)
+    tr, va, te = np.arange(0, 80), np.arange(80, 100), np.arange(100, 120)
+    field = FakeData(30, 4, seed=8)
+    classes, reachable = ["c0", "c1", "c2", "c3"], [0, 1, 2]
+
+    messages = []
+    check("the analysis waits for the gated arm rather than failing",
+          stages.gate_analysis(data, field, {"test": te}, classes, reachable, cfg,
+                               log=messages.append) is None
+          and any("has not finished" in m for m in messages))
+
+    # a finished gated arm, as run_arm leaves it
+    P.train_model("agft:gated", data, tr, va, 4, cfg, tag="final_agft_gated", epochs=1,
+                  keep_best=True, log=quiet)
+    P.write_json({"lr": 3e-4, "weight_decay": 0.01, "drop_rate": 0.1},
+                 os.path.join(cfg.paths["results"], "best_agft_gated.json"))
+    for name, field_acc, gate in (("agft:gated", 0.31, 0.42), ("convnextv2_atto.fcmae", 0.29, None)):
+        metrics = {"accuracy": field_acc, "macro_f1": field_acc, "gate": gate, "n": 30}
+        P.write_json({"name": name, "params": {}, "cv": {"mean_macro_f1": 0.99, "sd_macro_f1": 0.001},
+                      "val": {}, "plantvillage_test": {"accuracy": 0.998, "macro_f1": 0.997},
+                      "plantdoc": metrics, "plantdoc_closed_set": dict(metrics, accuracy=0.35)},
+                     os.path.join(cfg.paths["results"], f"final_{name.replace(':', '_')}.json"))
+
+    rows = stages.summarise(cfg, log=quiet)
+    check("the results table lists every finished arm, best on PlantDoc first",
+          [r["name"] for r in rows] and rows[0]["plantdoc"]["accuracy"] >= rows[-1]["plantdoc"]["accuracy"]
+          and os.path.isfile(os.path.join(cfg.paths["results"], "summary.json")))
+
+    table = open(os.path.join(cfg.paths["results"], "table_main.tex"), encoding="utf-8").read()
+    check("the paper's main table rows are written as LaTeX",
+          "AGFT, learned gate (ours)" in table and table.count("\\\\") == 1
+          and table.count("&") == 7, table.strip()[:70])
+
+    namespace = dict(stubs, rows=rows, CFG=cfg)
+    try:
+        exec(_notebook_cell(12), namespace)
+        drew = os.path.isfile(os.path.join(cfg.paths["figures"], "headline.png"))
+        check("notebook cell 12 draws the headline figure", drew and shown)
+    except Exception as exc:                                       # noqa: BLE001
+        check("notebook cell 12 draws the headline figure", False, f"{type(exc).__name__}: {exc}")
+
+    messages = []
+    report = stages.gate_analysis(data, field, {"test": te}, classes, reachable, cfg,
+                                  log=messages.append)
+    lab, pd_part = report["plantvillage_test"], report["plantdoc"]
+    check("the analysis measures both branches and the mixture on both datasets",
+          all(0.0 <= part[k] <= 1.0 for part in (lab, pd_part)
+              for k in ("tuned_only", "frozen_only", "gated")),
+          f"PlantDoc: tuned {pd_part['tuned_only']:.2f}, frozen {pd_part['frozen_only']:.2f}, "
+          f"gated {pd_part['gated']:.2f}")
+    sweep = pd_part["fixed_alpha_logit"]
+    check("alpha = 0 is exactly the frozen branch, alpha = 1 exactly the fine-tuned one",
+          len(sweep) == 21 and sweep[0] == pd_part["frozen_only"] and sweep[-1] == pd_part["tuned_only"])
+    check("the oracle alpha is the best of the sweep",
+          report["oracle_fixed_alpha_on_plantdoc"]["accuracy"] == max(sweep))
+    check("the gate lies in [0, 1] on both datasets",
+          0.0 <= lab["gate_mean"] <= 1.0 and 0.0 <= pd_part["gate_mean"] <= 1.0)
+    check("the lab-versus-field gate shift is tested",
+          report["gate_shift_lab_to_field"] is None
+          or 0.0 <= report["gate_shift_lab_to_field"]["p_value"] <= 1.0)
+    check("the closed-set view is reported for PlantDoc",
+          0.0 <= pd_part["closed_set"]["gated"] <= 1.0)
+    check("the analysis figure is written",
+          os.path.isfile(os.path.join(cfg.paths["figures"], "gate_analysis.png")))
+    check("its findings are printed", any("learned per-image gate" in m for m in messages))
+    gate_table = open(os.path.join(cfg.paths["results"], "table_gate.tex"), encoding="utf-8").read()
+    check("the paper's gate table rows are written as LaTeX",
+          gate_table.count("\\\\") == 5 and all(line.count("&") == 2
+                                               for line in gate_table.strip().splitlines()))
+    again = []
+    stages.gate_analysis(data, field, {"test": te}, classes, reachable, cfg, log=again.append)
+    check("a finished analysis is reused, not repeated", any("reusing" in m for m in again))
+
+    shown.clear()
+    namespace = dict(stubs, pv=data, pd_data=field, SPLITS={"test": te}, CLASSES=classes,
+                     REACHABLE=reachable, CFG=cfg, stages=stages)
+    try:
+        exec(_notebook_cell(13), namespace)
+        check("notebook cell 13 runs and shows the figure", shown and namespace.get("GATE"))
+    except Exception as exc:                                       # noqa: BLE001
+        check("notebook cell 13 runs and shows the figure", False, f"{type(exc).__name__}: {exc}")
 
 
 def test_label_bridge():
@@ -442,6 +549,7 @@ def main():
         test_optuna_and_cv(cfg)
         test_preflight(cfg)
         test_label_bridge()
+        test_end_of_study(cfg)
     finally:
         gc.collect()
         shutil.rmtree(root, ignore_errors=True)

@@ -123,6 +123,10 @@ class Config:
     optuna_subset: float = 0.2
     folds: int = 5
     fold_epochs: int = 8
+    # Run at most this many of the folds (0 = all). The split is still the
+    # `folds`-way one, so finished folds are reused as they are; the result
+    # records how many ran, and the paper's table marks a capped arm.
+    max_folds: int = 0
 
     # Two places to keep things, chosen per file:
     #
