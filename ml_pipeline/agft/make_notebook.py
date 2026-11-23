@@ -172,7 +172,10 @@ CFG = P.Config(
     root=STATE,                           # Drive: results, split, resume points
     img_size=224,
     batch_size=64,
-    epochs=12, patience=3,                # early stopping on val macro-F1
+    epochs=8, patience=3,                 # early stopping on val macro-F1. Time limit:
+                                          # the remaining final fit (AGFT-gated) uses 8
+                                          # epochs, its CV folds' budget; the six
+                                          # finished arms used 12
     optuna_trials=10, optuna_epochs=3, optuna_subset=0.2,
     folds=5, fold_epochs=8,
     max_folds=3,                          # time limit: an arm not yet cross-validated
